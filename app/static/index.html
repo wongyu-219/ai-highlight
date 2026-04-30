@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Highlight Manager</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Pretendard", "Apple SD Gothic Neo", system-ui, sans-serif;
+    }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top left, #3a2413 0%, #121212 45%, #0d0b0a 100%);
+      color: #f5efe8;
+    }
+    header {
+      padding: 24px 32px;
+      background: rgba(16, 12, 10, 0.95);
+      color: #f7f1e8;
+      border-bottom: 1px solid rgba(255, 116, 0, 0.15);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+    .mode-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 12px;
+      vertical-align: middle;
+      letter-spacing: 0.3px;
+    }
+    .mode-badge.off {
+      background: rgba(255, 116, 0, 0.14);
+      color: #ffb066;
+      border: 1px solid rgba(255, 116, 0, 0.45);
+    }
+    .mode-badge.on {
+      background: rgba(72, 187, 120, 0.14);
+      color: #7ee3a8;
+      border: 1px solid rgba(72, 187, 120, 0.45);
+    }
+    .mode-badge .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 6px currentColor;
+    }
+    main {
+      padding: 24px 32px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .panel {
+      background: rgba(23, 17, 14, 0.92);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+      margin-bottom: 20px;
+      border: 1px solid rgba(255, 116, 0, 0.08);
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .trend-card {
+      background: rgba(18, 13, 10, 0.8);
+      border-radius: 14px;
+      padding: 12px 16px;
+      border: 1px solid rgba(255, 116, 0, 0.2);
+      min-width: 240px;
+      flex: 0 0 auto;
+    }
+    .trend-card canvas {
+      display: block;
+      width: 240px;
+      height: 80px;
+    }
+    .row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .row input[type="number"] {
+      width: 120px;
+    }
+    button {
+      background: linear-gradient(135deg, #ff8a1d, #ff6a00);
+      color: #1b0f07;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 18px;
+      cursor: pointer;
+      font-weight: 700;
+      box-shadow: 0 10px 18px rgba(255, 106, 0, 0.25);
+    }
+    button.secondary {
+      background: #2b2018;
+      color: #f5efe8;
+      border: 1px solid rgba(255, 116, 0, 0.2);
+      box-shadow: none;
+    }
+    .status {
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .clip-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .clip-card {
+      background: rgba(26, 19, 15, 0.95);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+      position: relative;
+      border: 1px solid rgba(255, 116, 0, 0.08);
+    }
+    .clip-card video {
+      width: 100%;
+      border-radius: 10px;
+      background: #000;
+    }
+    .clip-index {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #FF7400;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      z-index: 2;
+    }
+    .clip-feature {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.65);
+      color: #ffb37c;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      z-index: 2;
+    }
+    .event-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(255, 180, 50, 0.2);
+      color: #ffd27a;
+      border: 1px solid rgba(255, 180, 50, 0.4);
+      margin-top: 6px;
+    }
+    .event-badge.none {
+      background: rgba(120, 120, 120, 0.1);
+      color: #8a7c70;
+      border-color: rgba(120, 120, 120, 0.2);
+    }
+    .event-badge .type-chip {
+      margin-left: 4px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      background: rgba(255, 106, 0, 0.35);
+      color: #fff1d9;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    button.event-btn {
+      background: linear-gradient(135deg, #ffd27a, #ffae3d);
+      color: #1b0f07;
+    }
+    select.event-type-select {
+      background: #2b2018;
+      color: #f5efe8;
+      border: 1px solid rgba(255, 180, 50, 0.4);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    select.event-type-select:focus {
+      outline: 2px solid rgba(255, 180, 50, 0.6);
+    }
+    .clip-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .badge {
+      display: inline-flex;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: rgba(255, 116, 0, 0.18);
+      color: #ffb37c;
+      border: 1px solid rgba(255, 116, 0, 0.25);
+    }
+    .muted {
+      color: #c9b7a7;
+      font-size: 14px;
+    }
+    /* 모달 스타일 */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: #1c1c1c;
+      border-radius: 16px;
+      padding: 24px;
+      width: min(1000px, 95vw);
+      max-height: 95vh;
+      overflow-y: auto;
+      border: 1px solid rgba(255, 116, 0, 0.2);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    /* 타임라인 스타일 */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .timeline-strip {
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      height: 80px;
+      cursor: pointer;
+      border: 1px solid #333;
+      overflow: hidden;
+    }
+    .thumbnail-strip {
+      display: flex;
+      height: 100%;
+      pointer-events: none;
+    }
+    .thumbnail-strip img {
+      height: 100%;
+      flex: 1;
+      object-fit: cover;
+      opacity: 0.5;
+    }
+    .trim-selection {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: rgba(255, 116, 0, 0.2);
+      border-left: 2px solid #FF7400;
+      border-right: 2px solid #FF7400;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .trim-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 12px;
+      background: #FF7400;
+      cursor: ew-resize;
+      z-index: 10;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    .playhead {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #fff;
+      pointer-events: none;
+      z-index: 15;
+    }
+    .tab-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      background: #2b2018;
+      color: #f5efe8;
+      border: 1px solid rgba(255, 116, 0, 0.2);
+      box-shadow: none;
+      border-radius: 999px;
+      padding: 7px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, #ff8a1d, #ff6a00);
+      color: #1b0f07;
+      border-color: transparent;
+      box-shadow: 0 6px 14px rgba(255, 106, 0, 0.25);
+    }
+    .source-badge {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .source-badge.log {
+      background: rgba(72, 187, 120, 0.18);
+      color: #7ee3a8;
+      border: 1px solid rgba(72, 187, 120, 0.4);
+    }
+    .source-badge.ai {
+      background: rgba(255, 116, 0, 0.14);
+      color: #ffb066;
+      border: 1px solid rgba(255, 116, 0, 0.35);
+    }
+    .order-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(26, 19, 15, 0.95);
+      border: 1px solid rgba(255, 116, 0, 0.15);
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: grab;
+      user-select: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .order-item:hover { border-color: rgba(255, 116, 0, 0.4); }
+    .order-item.drag-over { border-color: #ff8a1d; background: rgba(255, 116, 0, 0.08); }
+    .order-item.dragging { opacity: 0.4; }
+    .drag-handle { color: #8a7c70; font-size: 18px; cursor: grab; }
+    .order-num { color: #ff8a1d; font-weight: 700; font-size: 13px; min-width: 20px; text-align: right; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AI Highlight Manager<span id="modeBadge" class="mode-badge off" title="서버 시작 시점의 XGB 모드"><span class="dot"></span><span id="modeBadgeText">모드 확인 중...</span></span></h1>
+    <p class="muted">경기 영상을 업로드하면 하이라이트 후보 클립을 생성하고 웹에서 선택/삭제 관리할 수 있습니다.</p>
+  </header>
+  <main>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>영상 업로드</h2>
+        <div class="trend-card">
+          <div class="muted" style="margin-bottom: 6px;">XH Score Trend</div>
+          <canvas id="scoreTrend" width="240" height="80"></canvas>
+        </div>
+      </div>
+
+      <!-- 모드 탭 -->
+      <div class="tab-row">
+        <button class="tab-btn active" id="tabAI" onclick="switchTab('ai')">AI 탐지</button>
+        <button class="tab-btn" id="tabLog" onclick="switchTab('log')">로그 + AI</button>
+      </div>
+
+      <!-- AI 탐지 폼 -->
+      <div id="panelAI">
+        <div class="row">
+          <input type="file" id="videoInput" accept="video/*" />
+          <label>후보 수 <input type="number" id="countInput" min="10" max="40" value="40" /></label>
+          <button id="uploadBtn">분석 시작</button>
+          <button id="resetBtn" class="secondary">초기화</button>
+        </div>
+      </div>
+
+      <!-- 로그 + AI 폼 -->
+      <div id="panelLog" style="display:none;">
+        <div class="row" style="align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+          <div style="display:flex; flex-direction:column; gap:8px; flex:1; min-width:220px;">
+            <label class="muted">경기 영상</label>
+            <input type="file" id="logVideoInput" accept="video/*" />
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; flex:2; min-width:300px;">
+            <label class="muted">타임라인 로그 (.json 파일)</label>
+            <input type="file" id="logDataInput" accept=".json,application/json" />
+            <span class="muted" id="logFileInfo" style="font-size:12px;"></span>
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px; flex-wrap:wrap; gap:16px;">
+          <label class="muted" style="display:flex; align-items:center; gap:8px;">
+            후반 시작 (영상 내 시각)
+            <input type="number" id="halfStartMin" min="0" max="120" value="25" style="width:70px;" /> 분
+            <input type="number" id="halfStartSec" min="0" max="59" value="0" style="width:60px;" /> 초
+          </label>
+          <label class="muted">후보 수 <input type="number" id="logCountInput" min="10" max="40" value="40" /></label>
+          <button id="logUploadBtn">로그 분석 시작</button>
+          <button id="logResetBtn" class="secondary">초기화</button>
+        </div>
+      </div>
+
+      <!-- 공통: 기존 Run 불러오기 -->
+      <div class="row" style="margin-top: 10px; gap: 8px; flex-wrap: wrap;">
+        <label class="muted" style="display:flex; align-items:center; gap:6px;">
+          기존 Run 불러오기
+          <select id="existingJobSelect" class="event-type-select" style="min-width: 320px;">
+            <option value="">(선택)</option>
+          </select>
+        </label>
+        <button id="loadJobBtn" class="secondary">불러오기</button>
+        <button id="refreshJobsBtn" class="secondary">목록 새로고침</button>
+      </div>
+      <div class="status" id="status">대기 중</div>
+      <div class="muted" id="jobInfo"></div>
+    </section>
+
+    <section class="panel">
+      <div class="row" style="justify-content: space-between;">
+        <h2>하이라이트 후보</h2>
+        <div class="row">
+          <label class="muted" style="display:flex; align-items:center; gap:6px;">
+            필터
+            <select id="categoryFilter" class="event-type-select">
+              <option value="all">전체</option>
+              <option value="Good">Good 만</option>
+              <option value="Bad">Bad 만</option>
+              <option value="clips">미분류</option>
+              <option value="missing">파일 없음</option>
+            </select>
+          </label>
+          <span class="badge" id="selectedCount">선택 0개</span>
+          <button id="mergeBtn">선택 클립 합치기</button>
+          <button id="exportBtn" class="secondary">선택 클립 따로 저장</button>
+        </div>
+      </div>
+      <div class="muted" id="mergeInfo"></div>
+      <div class="muted" id="exportInfo"></div>
+      <div class="clip-grid" id="clipGrid"></div>
+
+      <!-- 합치기 순서 패널 -->
+      <div id="orderPanel" style="display:none; margin-top:20px; padding-top:16px; border-top:1px solid rgba(255,116,0,0.1);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <h3 style="margin:0; font-size:15px; color:#f5efe8;">합치기 순서</h3>
+          <span class="muted" style="font-size:12px;">드래그로 순서 변경 → 이 순서대로 합쳐집니다</span>
+        </div>
+        <div id="orderList" style="display:flex; flex-direction:column; gap:6px;"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="trimModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>클립 컷 편집</h2>
+        <button class="secondary" id="closeTrim">닫기</button>
+      </div>
+      <video id="trimVideo" controls style="width: 100%; border-radius: 12px; background: #000;"></video>
+      <div class="timeline">
+        <div class="timeline-strip" id="trimTimeline">
+          <div class="thumbnail-strip" id="trimThumbs"></div>
+          <div class="trim-selection" id="trimSelection"></div>
+          <div id="trimHandleStart" class="trim-handle"></div>
+          <div id="trimHandleEnd" class="trim-handle"></div>
+          <div class="playhead" id="trimPlayhead"></div>
+        </div>
+        <div class="row" style="justify-content: space-between;">
+          <span class="muted" id="trimCurrentTime">현재: 0.0s</span>
+          <span class="muted" id="trimRangeInfo">범위: 0.0s ~ 0.0s</span>
+        </div>
+        <div class="row" style="justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
+          <button id="loopToggle" class="secondary">구간 루프: OFF</button>
+          <label class="muted" style="display:flex; align-items:center; gap:6px;">
+            타입
+            <select id="eventTypeSelect" class="event-type-select"></select>
+          </label>
+          <button id="markEventBtn" class="event-btn">⚑ 이벤트 프레임 지정 (현재 시점)</button>
+          <button id="clearEventBtn" class="secondary">이벤트 지정 해제</button>
+          <button id="applyTrim">선택 구간 저장</button>
+        </div>
+        <div class="muted" id="currentEventInfo"></div>
+        <div class="muted" id="clipFeatureSummary"></div>
+        <div class="muted" id="trimModalInfo"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── 탭 전환 ──────────────────────────────────
+    function switchTab(mode) {
+      document.getElementById('panelAI').style.display  = mode === 'ai'  ? '' : 'none';
+      document.getElementById('panelLog').style.display = mode === 'log' ? '' : 'none';
+      document.getElementById('tabAI').classList.toggle('active', mode === 'ai');
+      document.getElementById('tabLog').classList.toggle('active', mode === 'log');
+    }
+
+    // ── 상수 및 변수 ──────────────────────────────
+    const uploadBtn = document.getElementById('uploadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const videoInput = document.getElementById('videoInput');
+    const countInput = document.getElementById('countInput');
+    const statusEl = document.getElementById('status');
+    const modeBadge = document.getElementById('modeBadge');
+    const modeBadgeText = document.getElementById('modeBadgeText');
+    fetch('/api/mode').then(r => r.json()).then(data => {
+      const on = !!data.use_xgb;
+      modeBadge.classList.toggle('on', on);
+      modeBadge.classList.toggle('off', !on);
+      modeBadgeText.textContent = on ? 'XGB ON · 실사용 모드' : 'XGB OFF · 학습 데이터 수집 모드';
+      modeBadge.title = on
+        ? '실사용 모드. 학습 데이터는 이 모드로 수집하지 마세요 (확증 편향).'
+        : '학습 데이터 수집 모드. 룰 기반 스코어만 사용.';
+    }).catch(() => {
+      modeBadgeText.textContent = '모드 확인 실패';
+    });
+    const jobInfoEl = document.getElementById('jobInfo');
+    const clipGrid = document.getElementById('clipGrid');
+    const mergeBtn = document.getElementById('mergeBtn');
+    const mergeInfo = document.getElementById('mergeInfo');
+    const exportBtn = document.getElementById('exportBtn');
+    const exportInfo = document.getElementById('exportInfo');
+    const selectedCountEl = document.getElementById('selectedCount');
+    
+    const trimModal = document.getElementById('trimModal');
+    const trimVideo = document.getElementById('trimVideo');
+    const trimTimeline = document.getElementById('trimTimeline');
+    const trimThumbs = document.getElementById('trimThumbs');
+    const trimSelection = document.getElementById('trimSelection');
+    const trimHandleStart = document.getElementById('trimHandleStart');
+    const trimHandleEnd = document.getElementById('trimHandleEnd');
+    const trimPlayhead = document.getElementById('trimPlayhead');
+    const trimModalInfo = document.getElementById('trimModalInfo');
+    const closeTrim = document.getElementById('closeTrim');
+    const applyTrim = document.getElementById('applyTrim');
+    const trimCurrentTime = document.getElementById('trimCurrentTime');
+    const trimRangeInfo = document.getElementById('trimRangeInfo');
+    const loopToggle = document.getElementById('loopToggle');
+    const clipFeatureSummary = document.getElementById('clipFeatureSummary');
+    const markEventBtn = document.getElementById('markEventBtn');
+    const clearEventBtn = document.getElementById('clearEventBtn');
+    const currentEventInfo = document.getElementById('currentEventInfo');
+    const eventTypeSelect = document.getElementById('eventTypeSelect');
+
+    // 이벤트 타입 목록 (서버와 동기화)
+    const EVENT_TYPE_LABELS = {
+      unknown: '미지정', goal: '골', shot: '슈팅', save: '선방',
+      setpiece: '세트피스', threat: '위협 전개', defense: '수비'
+    };
+    let EVENT_TYPES = ['unknown'];
+
+    async function loadEventTypes() {
+      try {
+        const res = await fetch('/api/event_types');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.types) && data.types.length > 0) {
+          EVENT_TYPES = ['unknown', ...data.types];
+        }
+      } catch (_) { /* ignore */ }
+      eventTypeSelect.innerHTML = EVENT_TYPES.map(t => {
+        const label = EVENT_TYPE_LABELS[t] || t;
+        return `<option value="${t}">${label}</option>`;
+      }).join('');
+    }
+    loadEventTypes();
+
+  const scoreTrend = document.getElementById('scoreTrend');
+  const scoreCtx = scoreTrend ? scoreTrend.getContext('2d') : null;
+
+    function fmtTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    let currentJobId = null;
+    let pollTimer = null;
+    let currentTrimClip = null;
+    let clipOrder = [];
+
+    function updateOrderPanel(selectedMap, logEvents) {
+      clipOrder = clipOrder.filter(name => selectedMap[name]);
+      for (const [name, isSelected] of Object.entries(selectedMap)) {
+        if (isSelected && !clipOrder.includes(name)) clipOrder.push(name);
+      }
+
+      const panel = document.getElementById('orderPanel');
+      const list = document.getElementById('orderList');
+      if (!clipOrder.length) { panel.style.display = 'none'; return; }
+      panel.style.display = '';
+      list.innerHTML = '';
+
+      const ctMap = (lastMetadata && lastMetadata.clip_timestamps) ? lastMetadata.clip_timestamps : {};
+
+      clipOrder.forEach((clip, idx) => {
+        const ev = Array.isArray(logEvents) ? logEvents.find(e => e.clip === clip) : null;
+        const source = ev ? ev.source : null;
+        const sourceBadge = source ? `<span class="source-badge ${source}">${source.toUpperCase()}</span>` : '';
+
+        const ts = ctMap[clip];
+        const tsStr = ts ? `<span style="font-size:11px; color:#8a7c70; white-space:nowrap;">⏱ ${fmtTime(ts.start)}~${fmtTime(ts.end)}</span>` : '';
+
+        const item = document.createElement('div');
+        item.className = 'order-item';
+        item.draggable = true;
+        item.dataset.idx = String(idx);
+        item.innerHTML = `
+          <span class="drag-handle">⠿</span>
+          <span class="order-num">${idx + 1}</span>
+          <span style="flex:1; font-size:13px; color:#c9b7a7; word-break:break-all;">${clip}</span>
+          ${tsStr}
+          ${sourceBadge}
+        `;
+
+        item.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', String(idx));
+          setTimeout(() => item.classList.add('dragging'), 0);
+        });
+        item.addEventListener('dragend', () => item.classList.remove('dragging'));
+        item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-over'); });
+        item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+        item.addEventListener('drop', e => {
+          e.preventDefault();
+          item.classList.remove('drag-over');
+          const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+          const toIdx = parseInt(item.dataset.idx);
+          if (fromIdx === toIdx) return;
+          const [moved] = clipOrder.splice(fromIdx, 1);
+          clipOrder.splice(toIdx, 0, moved);
+          updateOrderPanel(lastMetadata.selected, lastMetadata.log_events);
+        });
+        list.appendChild(item);
+      });
+    }
+    let trimStart = 0, trimEnd = 0;
+    let draggingHandle = null;
+    let loopEnabled = false;
+
+    // --- xH 스코어 그래프 로직 복구 ---
+    async function loadScoreTrend(jobId, highlightFrames = []) {
+      try {
+        // [수정] 메타데이터에서 서버가 알려준 정확한 CSV 파일명을 가져옴
+        const jobRes = await fetch(`/api/jobs/${jobId}`);
+        const jobData = await jobRes.json();
+        const scoreFileName = jobData.score_file || 'xh_scores.csv';
+
+        let res = await fetch(`/runs/${jobId}/${scoreFileName}`);
+        if (!res.ok) res = await fetch(`/runs/${jobId}/clips/${scoreFileName}`);
+        if (!res.ok) return;
+
+        const text = await res.text();
+        const lines = text.trim().split('\n');
+        if (lines.length < 2 || !scoreCtx) return;
+        const headers = lines[0].split(',');
+        const frameIdx = headers.indexOf('frame');
+        const scoreIdx = headers.indexOf('smoothed_score');
+        if (frameIdx === -1 || scoreIdx === -1) return;
+
+        const frames = [];
+        const scores = [];
+        lines.slice(1).forEach(line => {
+          const parts = line.split(',');
+          const frame = parseFloat(parts[frameIdx]);
+          const score = parseFloat(parts[scoreIdx]);
+          if (!isNaN(frame) && !isNaN(score)) {
+            frames.push(frame);
+            scores.push(score);
+          }
+        });
+
+        if (!scores.length) return;
+        const maxScore = Math.max(...scores), minScore = Math.min(...scores);
+        const range = maxScore - minScore || 1;
+
+        scoreCtx.clearRect(0, 0, scoreTrend.width, scoreTrend.height);
+        scoreCtx.strokeStyle = '#ff9a3d';
+        scoreCtx.lineWidth = 2;
+        scoreCtx.beginPath();
+        scores.forEach((value, idx) => {
+          const x = (idx / (scores.length - 1)) * scoreTrend.width;
+          const y = scoreTrend.height - ((value - minScore) / range) * scoreTrend.height;
+          idx === 0 ? scoreCtx.moveTo(x, y) : scoreCtx.lineTo(x, y);
+        });
+        scoreCtx.stroke();
+
+        if (highlightFrames.length && frames.length) {
+          scoreCtx.fillStyle = '#ff6a00';
+          highlightFrames.forEach(frame => {
+            let idx = frames.findIndex(f => f >= frame);
+            if (idx === -1) idx = frames.length - 1;
+            const x = (idx / (scores.length - 1)) * scoreTrend.width;
+            const y = scoreTrend.height - ((scores[idx] - minScore) / range) * scoreTrend.height;
+            scoreCtx.beginPath();
+            scoreCtx.arc(x, y, 3, 0, Math.PI * 2);
+            scoreCtx.fill();
+          });
+        }
+      } catch (err) { console.warn('Trend load failed', err); }
+    }
+
+    // --- 썸네일 추출 로직 수정 ---
+    async function generateThumbnails() {
+      trimThumbs.innerHTML = '';
+      const duration = trimVideo.duration;
+      if (!duration) return;
+
+      const count = 10;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 160; canvas.height = 90;
+
+      // 현재 비디오의 시간을 백업
+      const originalTime = trimVideo.currentTime;
+
+      for (let i = 0; i < count; i++) {
+        const time = (duration / (count - 1)) * i;
+        await new Promise(resolve => {
+          trimVideo.currentTime = time;
+          trimVideo.addEventListener('seeked', () => {
+            ctx.drawImage(trimVideo, 0, 0, canvas.width, canvas.height);
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL('image/jpeg', 0.7);
+            trimThumbs.appendChild(img);
+            resolve();
+          }, { once: true });
+        });
+      }
+      // 원래 시간으로 복구
+      trimVideo.currentTime = originalTime;
+    }
+
+    // --- 클립 렌더링 및 편집 모달 ---
+    let lastMetadata = null;
+    const categoryFilter = document.getElementById('categoryFilter');
+    categoryFilter.addEventListener('change', () => {
+      if (lastMetadata) renderClips(lastMetadata);
+    });
+
+    function renderClips(metadata) {
+      lastMetadata = metadata;
+      clipGrid.innerHTML = '';
+      currentJobId = metadata.job_id;
+      const { clips = [], selected = {}, trimmed = {}, clip_features = {}, clip_feature_stats = {}, event_marks = {}, clip_categories = {}, clip_scores = {}, clip_timestamps = {}, job_id } = metadata;
+      const filterVal = categoryFilter ? categoryFilter.value : 'all';
+
+      // 스코어 기반 순위 계산
+      const scoreRanks = {};
+      if (Object.keys(clip_scores).length > 0) {
+        [...clips].sort((a, b) => (clip_scores[b] || 0) - (clip_scores[a] || 0))
+                  .forEach((clip, i) => { scoreRanks[clip] = i + 1; });
+      }
+
+      const visibleClips = clips.filter(clip => {
+        if (filterVal === 'all') return true;
+        return (clip_categories[clip] || 'missing') === filterVal;
+      });
+
+      visibleClips.forEach((clip, idx) => {
+        const card = document.createElement('div');
+        card.className = 'clip-card';
+        const evMark = event_marks[clip];
+        let evBadge;
+        if (evMark) {
+          const typeKey = evMark.event_type || 'unknown';
+          const typeLabel = EVENT_TYPE_LABELS[typeKey] || typeKey;
+          evBadge = `<div class="event-badge">⚑ 이벤트 ${evMark.event_time_in_clip_sec.toFixed(1)}s (frame ${evMark.event_frame_original})<span class="type-chip">${typeLabel}</span></div>`;
+        } else {
+          evBadge = `<div class="event-badge none">⚑ 이벤트 미지정</div>`;
+        }
+
+        // 카테고리 배지 (Good / Bad / missing)
+        const cat = clip_categories[clip] || '';
+        const catColor = cat === 'Good' ? '#2e7d32'
+                       : cat === 'Bad' ? '#c62828'
+                       : cat === 'clips' ? '#616161'
+                       : '#999';
+        const catLabel = cat === 'Good' ? '✓ Good'
+                       : cat === 'Bad' ? '✗ Bad'
+                       : cat === 'clips' ? '미분류'
+                       : '파일 없음';
+        const catBadge = `<div style="position:absolute; top:8px; right:8px; background:${catColor}; color:#fff; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:600;">${catLabel}</div>`;
+
+        const videoSrc = `/api/jobs/${job_id}/clips/${clip}/file`;
+        card.style.position = 'relative';
+        // Good/Bad 버튼 활성화 표시
+        const goodActive = cat === 'Good' ? 'background:#2e7d32; color:#fff;' : '';
+        const badActive = cat === 'Bad' ? 'background:#c62828; color:#fff;' : '';
+
+        const rankNum = scoreRanks[clip];
+        const scoreVal = clip_scores[clip];
+        const rankLabel = rankNum ? `${rankNum}위` : `#${idx + 1}`;
+        const scoreLabel = scoreVal !== undefined ? ` · ${(scoreVal * 100).toFixed(1)}` : '';
+
+        const ts = clip_timestamps[clip];
+        const tsLabel = ts ? `⏱ ${fmtTime(ts.start)} ~ ${fmtTime(ts.end)}` : '';
+
+        card.innerHTML = `
+          ${catBadge}
+          <div class="clip-index" title="스코어 순위">${rankLabel}${scoreLabel}</div>
+          <div class="clip-feature">${clip_features[clip] || 'N/A'}</div>
+          <video controls src="${videoSrc}"></video>
+          ${tsLabel ? `<div style="font-size:11px; color:#8a7c70; margin:4px 2px 2px; letter-spacing:0.3px;">${tsLabel}</div>` : ''}
+          <div class="clip-actions" style="flex-wrap:wrap; gap:6px;">
+            <button class="classify-good-btn" style="flex:1; min-width:0; ${goodActive}">✓ Good</button>
+            <button class="classify-bad-btn" style="flex:1; min-width:0; ${badActive}">✗ Bad</button>
+            <label style="display:flex; align-items:center; gap:4px;"><input type="checkbox" ${selected[clip] ? 'checked' : ''} /> 선택</label>
+            <button class="secondary del-btn">삭제</button>
+          </div>
+          ${evBadge}
+          <button class="secondary trim-btn" style="width:100%; margin-top:8px;">컷 편집 / 이벤트 지정</button>
+        `;
+
+        async function classifyAs(targetCat) {
+          const res = await fetch(`/api/jobs/${job_id}/clips/${clip}/classify?category=${targetCat}`, {method:'POST'});
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({detail:'분류 실패'}));
+            alert(err.detail || '분류 실패');
+            return;
+          }
+          const refreshed = await fetchJob(job_id);
+          renderClips(refreshed);
+        }
+        card.querySelector('.classify-good-btn').onclick = () => classifyAs(cat === 'Good' ? 'clips' : 'Good');
+        card.querySelector('.classify-bad-btn').onclick  = () => classifyAs(cat === 'Bad'  ? 'clips' : 'Bad');
+
+        card.querySelector('input[type=checkbox]').onchange = async (e) => {
+          await fetch(`/api/jobs/${job_id}/clips/${clip}/select?selected=${e.target.checked}`, {method:'POST'});
+          const refreshed = await fetchJob(job_id);
+          renderClips(refreshed);
+        };
+        card.querySelector('.del-btn').onclick = async () => {
+          if (!confirm('이 클립을 영구 삭제합니다. 계속?')) return;
+          await fetch(`/api/jobs/${job_id}/clips/${clip}`, {method:'DELETE'});
+          const refreshed = await fetchJob(job_id); renderClips(refreshed);
+        };
+        card.querySelector('.trim-btn').onclick = () => {
+          currentTrimClip = { jobId: job_id, clip };
+          const baseClip = trimmed[clip] ? trimmed[clip].from : clip;
+          const stats = clip_feature_stats[baseClip];
+          if (stats) {
+            // [수정] 피처 이름 매핑 (한글화)
+            const labelMap = {
+              'f_ball_speed': '공 속도',
+              'f_ball_accel': '공 가속도',
+              'player_density': '선수 밀집도',
+              'f_motion': '움직임',
+              'f_audio': '환호성',
+              'f_goalpost_visible': '골대 시야',
+              'f_dist_centroid_to_goal': '골대와 거리(선수)',
+              'f_dist_ball_to_goal': '골대와 거리(공)'
+            };
+
+            const sorted = Object.entries(stats)
+              .sort((a, b) => b[1] - a[1])
+              .map(([key, value], idx) => {
+                const label = labelMap[key] || key;
+                return `${idx + 1}. ${label} ${(value * 100).toFixed(1)}%`;
+              })
+              .join(' · ');
+            clipFeatureSummary.textContent = `피처 기여도: ${sorted}`;
+          } else {
+            clipFeatureSummary.textContent = '피처 기여도: 데이터 없음';
+          }
+          trimVideo.src = `/api/jobs/${job_id}/clips/${clip}/file`;
+          trimModal.classList.add('active');
+          trimVideo.onloadedmetadata = () => {
+            trimStart = 0; trimEnd = trimVideo.duration;
+            updateTrimOverlay(); generateThumbnails();
+          };
+          refreshEventInfo();
+        };
+        clipGrid.appendChild(card);
+      });
+      selectedCountEl.textContent = `선택 ${Object.values(selected).filter(Boolean).length}개`;
+      updateOrderPanel(selected, metadata.log_events);
+    }
+
+    // --- 편집 UI 컨트롤 ---
+    function updateTrimOverlay() {
+      const dur = trimVideo.duration || 1;
+      trimSelection.style.left = `${(trimStart / dur) * 100}%`;
+      trimSelection.style.width = `${((trimEnd - trimStart) / dur) * 100}%`;
+      trimHandleStart.style.left = `calc(${(trimStart / dur) * 100}% - 6px)`;
+      trimHandleEnd.style.left = `calc(${(trimEnd / dur) * 100}% - 6px)`;
+      trimRangeInfo.textContent = `범위: ${trimStart.toFixed(1)}s ~ ${trimEnd.toFixed(1)}s`;
+    }
+
+    trimHandleStart.onmousedown = () => draggingHandle = 'start';
+    trimHandleEnd.onmousedown = () => draggingHandle = 'end';
+    window.onmousemove = (e) => {
+      if (!draggingHandle) return;
+      const rect = trimTimeline.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const time = pct * trimVideo.duration;
+      if (draggingHandle === 'start') trimStart = Math.min(time, trimEnd - 0.1);
+      else trimEnd = Math.max(time, trimStart + 0.1);
+      updateTrimOverlay();
+    };
+    window.onmouseup = () => draggingHandle = null;
+
+    trimTimeline.onclick = (e) => {
+      if (draggingHandle) return;
+      const rect = trimTimeline.getBoundingClientRect();
+      trimVideo.currentTime = ((e.clientX - rect.left) / rect.width) * trimVideo.duration;
+    };
+
+    trimVideo.ontimeupdate = () => {
+      trimPlayhead.style.left = `${(trimVideo.currentTime / trimVideo.duration) * 100}%`;
+      trimCurrentTime.textContent = `현재: ${trimVideo.currentTime.toFixed(1)}s`;
+      if (loopEnabled && trimVideo.currentTime >= trimEnd) trimVideo.currentTime = trimStart;
+    };
+
+    closeTrim.onclick = () => { trimModal.classList.remove('active'); trimVideo.pause(); };
+    loopToggle.onclick = () => { loopEnabled = !loopEnabled; loopToggle.textContent = `구간 루프: ${loopEnabled?'ON':'OFF'}`; };
+    
+    applyTrim.onclick = async () => {
+      trimModalInfo.textContent = '적용 중...';
+      const res = await fetch(`/api/jobs/${currentTrimClip.jobId}/clips/${currentTrimClip.clip}/trim?start=${trimStart}&end=${trimEnd}`, {method:'POST'});
+      if (res.ok) {
+        trimModalInfo.textContent = '저장 완료!';
+        const refreshed = await fetchJob(currentTrimClip.jobId); renderClips(refreshed);
+        setTimeout(() => trimModal.classList.remove('active'), 1000);
+      }
+    };
+
+    // --- 이벤트 프레임 지정 로직 ---
+    async function refreshEventInfo() {
+      if (!currentTrimClip) { currentEventInfo.textContent = ''; return; }
+      try {
+        const res = await fetch(`/api/jobs/${currentTrimClip.jobId}/clips/${currentTrimClip.clip}/event`);
+        if (res.ok) {
+          const m = await res.json();
+          const typeKey = m.event_type || 'unknown';
+          const typeLabel = EVENT_TYPE_LABELS[typeKey] || typeKey;
+          currentEventInfo.innerHTML = `<strong style="color:#ffd27a;">⚑ 현재 이벤트: 클립 내 ${m.event_time_in_clip_sec.toFixed(2)}s / 원본 frame ${m.event_frame_original} · <span style="text-transform:uppercase;">${typeLabel}</span></strong>`;
+          // 드롭다운을 현재 값으로 프리셀렉트
+          if (eventTypeSelect && EVENT_TYPES.includes(typeKey)) {
+            eventTypeSelect.value = typeKey;
+          }
+        } else {
+          currentEventInfo.textContent = '현재 지정된 이벤트 없음';
+          if (eventTypeSelect) eventTypeSelect.value = 'unknown';
+        }
+      } catch (_) { currentEventInfo.textContent = ''; }
+    }
+
+    markEventBtn.onclick = async () => {
+      if (!currentTrimClip) return;
+      const t = trimVideo.currentTime;
+      const fd = new FormData();
+      fd.append('event_time_in_clip', String(t));
+      fd.append('event_type', eventTypeSelect ? eventTypeSelect.value : 'unknown');
+      const res = await fetch(
+        `/api/jobs/${currentTrimClip.jobId}/clips/${currentTrimClip.clip}/event`,
+        { method: 'POST', body: fd }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({detail: '요청 실패'}));
+        currentEventInfo.textContent = `실패: ${err.detail || ''}`;
+        return;
+      }
+      const data = await res.json();
+      const typeLabel = EVENT_TYPE_LABELS[data.mark.event_type] || data.mark.event_type;
+      currentEventInfo.innerHTML = `<strong style="color:#ffd27a;">⚑ 저장됨: 클립 내 ${data.mark.event_time_in_clip_sec.toFixed(2)}s → 원본 frame ${data.mark.event_frame_original} · <span style="text-transform:uppercase;">${typeLabel}</span></strong>`;
+      const refreshed = await fetchJob(currentTrimClip.jobId);
+      renderClips(refreshed);
+    };
+
+    clearEventBtn.onclick = async () => {
+      if (!currentTrimClip) return;
+      await fetch(
+        `/api/jobs/${currentTrimClip.jobId}/clips/${currentTrimClip.clip}/event`,
+        { method: 'DELETE' }
+      );
+      currentEventInfo.textContent = '이벤트 지정 해제됨';
+      const refreshed = await fetchJob(currentTrimClip.jobId);
+      renderClips(refreshed);
+    };
+
+    // --- 공통 로직 ---
+    async function fetchJob(jobId) { const res = await fetch(`/api/jobs/${jobId}`); return res.json(); }
+
+    // --- 기존 Run 목록 ---
+    const existingJobSelect = document.getElementById('existingJobSelect');
+    const loadJobBtn = document.getElementById('loadJobBtn');
+    const refreshJobsBtn = document.getElementById('refreshJobsBtn');
+
+    async function loadExistingJobs() {
+      try {
+        const res = await fetch('/api/jobs');
+        const data = await res.json();
+        const jobs = data.jobs || [];
+        existingJobSelect.innerHTML = '<option value="">(선택)</option>';
+        jobs.forEach(j => {
+          const dt = j.created_at ? new Date(j.created_at * 1000).toLocaleString() : '-';
+          const short = (j.job_id || '').slice(0, 8);
+          const src = j.source_filename ? ` · ${j.source_filename}` : '';
+          const opt = document.createElement('option');
+          opt.value = j.job_id;
+          opt.textContent = `${short}  [${j.status}]  clips=${j.clip_count}${src}  · ${dt}`;
+          existingJobSelect.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('기존 job 목록 로드 실패', e);
+      }
+    }
+
+    loadJobBtn.onclick = async () => {
+      const jobId = existingJobSelect.value;
+      if (!jobId) { alert('불러올 Run 을 선택하세요.'); return; }
+      currentJobId = jobId;
+      statusEl.textContent = `기존 Run 불러오는 중: ${jobId.slice(0,8)}...`;
+      const data = await fetchJob(jobId);
+      statusEl.textContent = `${data.status}: ${data.message || ''}`;
+      renderClips(data);
+      if (data.status === 'done') loadScoreTrend(jobId, data.highlight_frames);
+      // 진행중이면 폴링 계속
+      if (data.status !== 'done' && data.status !== 'error') startPolling(jobId);
+    };
+
+    refreshJobsBtn.onclick = loadExistingJobs;
+
+    // 페이지 로드 시 자동 목록 로드 + URL ?job=xxx 지원
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadExistingJobs();
+      const params = new URLSearchParams(window.location.search);
+      const urlJob = params.get('job');
+      if (urlJob) {
+        existingJobSelect.value = urlJob;
+        loadJobBtn.click();
+      }
+    });
+
+    uploadBtn.onclick = async () => {
+      if (!videoInput.files[0]) { alert('영상을 선택하세요.'); return; }
+      const formData = new FormData();
+      formData.append('file', videoInput.files[0]);
+      formData.append('highlight_count', countInput.value);
+      statusEl.textContent = '업로드 중...';
+      const res = await fetch('/api/jobs', { method: 'POST', body: formData });
+      const data = await res.json();
+      currentJobId = data.job_id;
+      startPolling(currentJobId);
+    };
+
+    // ── 로그 업로드 ───────────────────────────────
+    const logUploadBtn  = document.getElementById('logUploadBtn');
+    const logResetBtn   = document.getElementById('logResetBtn');
+    const logVideoInput = document.getElementById('logVideoInput');
+    const logDataInput  = document.getElementById('logDataInput');
+    const halfStartMin  = document.getElementById('halfStartMin');
+    const halfStartSec  = document.getElementById('halfStartSec');
+    const logCountInput = document.getElementById('logCountInput');
+
+    // 파일 선택 시 파일명 표시
+    logDataInput.addEventListener('change', () => {
+      const f = logDataInput.files[0];
+      document.getElementById('logFileInfo').textContent = f ? f.name : '';
+    });
+
+    logUploadBtn.onclick = async () => {
+      if (!logVideoInput.files[0]) { alert('영상을 선택하세요.'); return; }
+      if (!logDataInput.files[0]) { alert('로그 JSON 파일을 선택하세요.'); return; }
+
+      let rawLog;
+      try {
+        rawLog = await logDataInput.files[0].text();
+        JSON.parse(rawLog);
+      } catch {
+        alert('JSON 파일을 읽을 수 없거나 형식이 잘못됐습니다.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', logVideoInput.files[0]);
+      formData.append('log_data', rawLog);
+      formData.append('second_half_start_min', halfStartMin.value);
+      formData.append('second_half_start_sec_extra', halfStartSec.value);
+      formData.append('highlight_count', logCountInput.value);
+      statusEl.textContent = '로그 업로드 중...';
+
+      const res = await fetch('/api/log-jobs', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        statusEl.textContent = `오류: ${err.detail || '업로드 실패'}`;
+        return;
+      }
+      const data = await res.json();
+      currentJobId = data.job_id;
+      startPolling(currentJobId);
+    };
+
+    logResetBtn.onclick = () => {
+      logVideoInput.value = '';
+      logDataInput.value = '';
+      document.getElementById('logFileInfo').textContent = '';
+      halfStartMin.value = '25';
+      halfStartSec.value = '0';
+      statusEl.textContent = '대기 중';
+      clipGrid.innerHTML = '';
+      currentJobId = null;
+    };
+
+    function startPolling(jobId) {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(async () => {
+        const data = await fetchJob(jobId);
+        statusEl.textContent = `${data.status}: ${data.message}`;
+        if (data.status === 'done' || data.status === 'error') {
+          clearInterval(pollTimer);
+          renderClips(data);
+          if (data.status === 'done') loadScoreTrend(jobId, data.highlight_frames);
+        }
+      }, 3000);
+    }
+
+    mergeBtn.onclick = async () => {
+      if (!currentJobId) return;
+      mergeInfo.textContent = '합치는 중...';
+      const res = await fetch(`/api/jobs/${currentJobId}/export`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clip_order: clipOrder.length ? clipOrder : null }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        mergeInfo.textContent = err.detail || '합치기 실패';
+        return;
+      }
+      const data = await res.json();
+      mergeInfo.innerHTML = `합쳐진 영상: <a href="/runs/${currentJobId}/${data.merged}" target="_blank">다운로드</a>`;
+    };
+
+    exportBtn.onclick = async () => {
+      if (!currentJobId) return;
+      exportInfo.textContent = '저장 중...';
+      const res = await fetch(`/api/jobs/${currentJobId}/export/selected`, { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json();
+        exportInfo.textContent = err.detail || '저장 실패';
+        return;
+      }
+      const data = await res.json();
+      exportInfo.textContent = `저장 완료: ${data.exported.length}개`;
+    };
+
+    resetBtn.onclick = () => location.reload();
+  </script>
+</body>
+</html>

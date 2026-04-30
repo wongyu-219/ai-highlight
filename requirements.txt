@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+opencv-python
+pandas
+numpy
+torch
+ultralytics
+moviepy
+scipy
+tqdm
+xgboost
+shap
+scikit-learn
+matplotlib

@@ -1,0 +1,36 @@
+{
+  "status": 200,
+  "data": [
+    {
+      "id": 4001,
+      "elapsedMinutes": 25,
+      "halfType": "FIRST_HALF",
+      "teamId": 84,
+      "teamName": "FC LABAMBA",
+      "userId": 1127,
+      "userName": "고정훈",
+      "eventLog": "GOAL"
+    },
+    {
+      "id": 4002,
+      "elapsedMinutes": 8,
+      "halfType": "SECOND_HALF",
+      "teamId": 78,
+      "teamName": "FC BASTARD",
+      "userId": 907,
+      "userName": "김건우",
+      "eventLog": "GOAL"
+    },
+    {
+      "id": 4003,
+      "elapsedMinutes": 18,
+      "halfType": "SECOND_HALF",
+      "teamId": 84,
+      "teamName": "FC LABAMBA",
+      "userId": 1099,
+      "userName": "고승우",
+      "eventLog": "GOAL"
+    }
+  ],
+  "message": "OK"
+}

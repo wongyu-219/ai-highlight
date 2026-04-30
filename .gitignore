@@ -1,0 +1,33 @@
+# 영상 파일
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# 업로드/추출/분류 디렉토리 (대용량)
+uploads/
+runs/
+highlights/
+exports/
+
+# 학습 데이터 (생성 파일)
+*.csv
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
