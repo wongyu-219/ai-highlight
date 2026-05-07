@@ -16,7 +16,7 @@ VIDEO_PATH = "test1.mp4"
 MODEL_PATH = "best-8.pt"
 OUTPUT_DIR = "highlights"
 CONF_THRESHOLD = 0.15
-HIGHLIGHT_COUNT = 40
+SCORE_THRESHOLD = 0.2
 CLIP_DURATION_BEFORE = 15
 CLIP_DURATION_AFTER = 10
 MIN_SECONDS_BETWEEN_CLIPS = 15
@@ -26,6 +26,7 @@ MIN_SECONDS_BETWEEN_CLIPS = 15
 # 실사용/데모 시에만 `USE_XGB=1` 환경변수로 명시적 활성화.
 USE_XGB = os.environ.get("USE_XGB", "0") == "1"
 AI_HIGHLIGHT_MODEL_PATH = "highlight_model.xgb" if USE_XGB else "highlight_model.DISABLED.xgb"
+HIGHLIGHT_COUNT = 40 if USE_XGB else 30  # 실사용: 40, 학습 데이터 수집: 30 (품질 우선)
 
 # --- XGBoost 모델 전역 로드 ---
 AI_MODEL = xgb.XGBClassifier()
@@ -318,8 +319,10 @@ class XHScoreCalculator:
     def _compute_rule_score(self, feat_df: pd.DataFrame) -> pd.DataFrame:
         """XH rule-based vision score 계산."""
         # 골대 가시성 ±2초 grace period 적용 후 centroid-goal 역거리
-        max_dist = feat_df['f_dist_centroid_to_goal'].max() + 1e-5
-        inv_dist_centroid = (1.0 - feat_df['f_dist_centroid_to_goal'] / max_dist).clip(lower=0)
+        # 골대 미탐지 프레임은 fillna(0)으로 채워졌으나 실제 거리=0은 불가 → 0은 미탐지로 처리
+        dist_centroid = feat_df['f_dist_centroid_to_goal'].where(feat_df['f_dist_centroid_to_goal'] > 0)
+        max_dist = dist_centroid.max() + 1e-5
+        inv_dist_centroid = (1.0 - dist_centroid / max_dist).clip(lower=0).fillna(0.0)
         window_size = int(self.fps * 4 + 1)
         visible_in_window = feat_df['f_goalpost_visible'].rolling(window=window_size, center=True).max().fillna(0)
         # 골대 비가시 구간은 0.3배 soft penalty (하드 0 → 화면 밖 역습/중거리슛 FN 감소)
@@ -339,10 +342,11 @@ class XHScoreCalculator:
         feat_df.loc[cond1_strong, 'bonus_score'] = 0.7
 
         base_vision = (
-            inv_dist_centroid * 0.4 +
+            inv_dist_centroid * 0.35 +
             feat_df['player_density'] * 0.25 +
-            feat_df['f_ball_accel'] * 0.2 +
-            feat_df['f_ball_speed'] * 0.1 +
+            feat_df['f_ball_accel'] * 0.20 +
+            feat_df['f_ball_dir_change'] * 0.10 +
+            feat_df['f_ball_speed'] * 0.05 +
             feat_df['f_players_near_ball'] * 0.05
         )
         vision_score = (base_vision + feat_df['bonus_score']).clip(upper=1.0)
@@ -450,6 +454,7 @@ class HighlightExtractor:
         anchored_candidates = [
             {'frame': int(xh_df.loc[p_idx, 'frame']), 'score': xh_df.loc[p_idx, 'smoothed_score']}
             for p_idx in peaks
+            if xh_df.loc[p_idx, 'smoothed_score'] >= SCORE_THRESHOLD
         ]
 
         if not anchored_candidates:
@@ -609,40 +614,63 @@ def run_highlight_pipeline(
     })
     mapping_df.to_csv(os.path.join(output_dir, f"{video_prefix}_clip_mapping.csv"), index=False)
 
-    # XAI: 피처 기여도 계산
-    # 모델 있을 때: feature_importances_ × 피처값 (ML_FEATURES 윈도우 통계 기반)
-    # 모델 없을 때: 룰 가중치 × 피처값 (xh_score 실제 가중치 반영)
+    # XAI: Shapley 기여도 계산
+    # XGB 모드: TreeExplainer로 실제 SHAP 값 (양수=기여, 음수=감점)
+    # 룰 모드: weight × (클립값 - 영상평균) → "이 클립이 평균 대비 얼마나 특별한가"
     _RULE_CONTRIB = {
-        'inv_dist_centroid_masked': 0.40,
+        'inv_dist_centroid_masked': 0.35,
         'player_density': 0.25,
         'f_ball_accel': 0.20,
-        'f_ball_speed': 0.10,
+        'f_ball_dir_change': 0.10,
+        'f_ball_speed': 0.05,
         'f_players_near_ball': 0.05,
     }
     model_loaded = os.path.exists(AI_HIGHLIGHT_MODEL_PATH)
+    ai_features_used = (ML_FEATURES[:AI_MODEL_N_FEATURES]
+                        if AI_MODEL_N_FEATURES and AI_MODEL_N_FEATURES < len(ML_FEATURES)
+                        else ML_FEATURES)
+
+    # 룰 모드용 영상 전체 피처 평균 (baseline)
+    rule_feature_means = {
+        f: float(xh_df[f].mean()) if f in xh_df.columns else 0.0
+        for f in _RULE_CONTRIB
+    }
+
+    clip_feature_stats: dict[int, dict[str, float]] = {}
+
     if model_loaded:
-        importances = dict(zip(ML_FEATURES, AI_MODEL.feature_importances_))
+        try:
+            import shap as _shap
+            explainer = _shap.TreeExplainer(AI_MODEL)
+            for frame in highlight_frames:
+                row = xh_df[xh_df['frame'] == frame].head(1)
+                if row.empty:
+                    continue
+                X_row = np.array([[float(row[f].iloc[0]) if f in xh_df.columns else 0.0
+                                   for f in ai_features_used]])
+                raw = explainer.shap_values(X_row)
+                # binary classifier: list[class0, class1] 또는 단일 배열
+                shap_vals = raw[1][0] if isinstance(raw, list) else raw[0]
+                clip_feature_stats[frame] = dict(zip(ai_features_used, [float(v) for v in shap_vals]))
+        except Exception as e:
+            print(f"SHAP 계산 실패, 룰 기반으로 대체: {e}")
+            model_loaded = False
 
-    clip_feature_stats = {}
-    for frame in highlight_frames:
-        row = xh_df[xh_df['frame'] == frame].head(1)
-        if row.empty:
-            continue
-        if model_loaded:
-            vals = {f: importances[f] * (float(row[f].iloc[0]) if f in xh_df.columns else 0.0)
-                    for f in ML_FEATURES}
-        else:
-            vals = {f: w * (float(row[f].iloc[0]) if f in xh_df.columns else 0.0)
-                    for f, w in _RULE_CONTRIB.items()}
-        total_sum = sum(vals.values())
-        clip_feature_stats[frame] = (
-            {k: v / total_sum for k, v in vals.items()}
-            if total_sum > 1e-9
-            else {k: 1.0 / len(vals) for k in vals}
-        )
+    if not model_loaded:
+        for frame in highlight_frames:
+            row = xh_df[xh_df['frame'] == frame].head(1)
+            if row.empty:
+                continue
+            # 영상 평균 대비 초과분 × 가중치 → 이 클립에서 특별히 튄 피처를 부각
+            vals = {
+                f: w * (float(row[f].iloc[0] if f in xh_df.columns else 0.0) - rule_feature_means[f])
+                for f, w in _RULE_CONTRIB.items()
+            }
+            clip_feature_stats[frame] = vals
 
+    # 최대 절댓값 기준으로 주요 피처 선정 (SHAP 음수 처리)
     clip_features = [
-        max(clip_feature_stats[frame].items(), key=lambda x: x[1])[0]
+        max(clip_feature_stats[frame].items(), key=lambda x: abs(x[1]))[0]
         if frame in clip_feature_stats else 'unknown'
         for frame in highlight_frames
     ]
@@ -657,7 +685,7 @@ def run_highlight_pipeline(
     if highlight_frames:
         f0 = highlight_frames[0]
         if f0 in clip_feature_stats:
-            top_f = max(clip_feature_stats[f0].items(), key=lambda x: x[1])
+            top_f = max(clip_feature_stats[f0].items(), key=lambda x: abs(x[1]))
             status_msg += f" | 주요 기여 피처: {top_f[0]} ({top_f[1]*100:.1f}%)"
 
     return HighlightRunResult(True, status_msg, fps, highlight_frames,

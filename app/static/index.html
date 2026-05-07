@@ -361,6 +361,12 @@
     .order-item.dragging { opacity: 0.4; }
     .drag-handle { color: #8a7c70; font-size: 18px; cursor: grab; }
     .order-num { color: #ff8a1d; font-weight: 700; font-size: 13px; min-width: 20px; text-align: right; }
+    .shap-chart-mini { display: block; width: 100%; height: 80px; margin-top: 8px; border-radius: 6px; background: rgba(0,0,0,0.25); }
+    .shap-chart-full { display: block; width: 100%; height: 200px; border-radius: 8px; background: rgba(0,0,0,0.3); margin-top: 10px; }
+    .shap-legend { display: flex; gap: 14px; margin-top: 6px; font-size: 11px; color: #8a7c70; }
+    .shap-legend span { display: flex; align-items: center; gap: 4px; }
+    .shap-legend .dot-pos { width: 10px; height: 10px; border-radius: 2px; background: #ff8a1d; }
+    .shap-legend .dot-neg { width: 10px; height: 10px; border-radius: 2px; background: #6ab4f5; }
   </style>
 </head>
 <body>
@@ -382,6 +388,7 @@
       <div class="tab-row">
         <button class="tab-btn active" id="tabAI" onclick="switchTab('ai')">AI 탐지</button>
         <button class="tab-btn" id="tabLog" onclick="switchTab('log')">로그 + AI</button>
+        <button class="tab-btn" id="tabTag" onclick="switchTab('tag')">이벤트 태깅</button>
       </div>
 
       <!-- AI 탐지 폼 -->
@@ -416,6 +423,38 @@
           <label class="muted">후보 수 <input type="number" id="logCountInput" min="10" max="40" value="40" /></label>
           <button id="logUploadBtn">로그 분석 시작</button>
           <button id="logResetBtn" class="secondary">초기화</button>
+        </div>
+      </div>
+
+      <!-- 이벤트 태깅 패널 -->
+      <div id="panelTag" style="display:none;">
+        <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;">
+          <!-- 좌: 영상 -->
+          <div style="flex:1; min-width:280px;">
+            <div class="row" style="gap:8px; margin-bottom:10px;">
+              <select id="tagJobSelect" class="event-type-select" style="flex:1; min-width:0;"></select>
+              <button id="tagLoadBtn" class="secondary">영상 불러오기</button>
+            </div>
+            <video id="tagVideo" controls style="width:100%; border-radius:10px; background:#000; display:none;"></video>
+            <div class="muted" id="tagVideoInfo" style="font-size:11px; margin-top:4px;"></div>
+          </div>
+          <!-- 우: 태깅 컨트롤 -->
+          <div style="flex:0 0 200px;">
+            <div class="muted" style="font-size:11px; margin-bottom:4px;">현재 재생 위치</div>
+            <div id="tagCurrentTime" style="font-size:32px; font-weight:700; color:#ff8a1d; font-variant-numeric:tabular-nums; letter-spacing:1px;">0:00.0</div>
+            <div class="muted" id="tagFrameInfo" style="font-size:11px; margin-bottom:14px;">frame 0</div>
+            <label class="muted" style="font-size:12px;">이벤트 타입</label>
+            <select id="tagEventType" class="event-type-select" style="width:100%; margin-top:4px; margin-bottom:10px;"></select>
+            <button id="tagMarkBtn" style="width:100%;" disabled>⚑ 현재 시점 태그</button>
+          </div>
+        </div>
+        <!-- 태그 목록 -->
+        <div id="tagMarkListWrap" style="display:none; margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,116,0,0.1);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:13px; font-weight:600;">태그 목록</span>
+            <span class="badge" id="tagMarkCount">0개</span>
+          </div>
+          <div id="tagMarkList" style="display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto;"></div>
         </div>
       </div>
 
@@ -498,7 +537,14 @@
           <button id="applyTrim">선택 구간 저장</button>
         </div>
         <div class="muted" id="currentEventInfo"></div>
-        <div class="muted" id="clipFeatureSummary"></div>
+        <div id="shapChartArea" style="display:none;">
+          <div style="font-size:12px; color:#8a7c70; margin-top:12px; margin-bottom:2px;">왜 하이라이트로 뽑혔나 (Shapley 기여도)</div>
+          <canvas id="shapChartFull" class="shap-chart-full"></canvas>
+          <div class="shap-legend">
+            <span><span class="dot-pos"></span> 하이라이트 가능성 ↑</span>
+            <span><span class="dot-neg"></span> 하이라이트 가능성 ↓</span>
+          </div>
+        </div>
         <div class="muted" id="trimModalInfo"></div>
       </div>
     </div>
@@ -509,8 +555,11 @@
     function switchTab(mode) {
       document.getElementById('panelAI').style.display  = mode === 'ai'  ? '' : 'none';
       document.getElementById('panelLog').style.display = mode === 'log' ? '' : 'none';
+      document.getElementById('panelTag').style.display = mode === 'tag' ? '' : 'none';
       document.getElementById('tabAI').classList.toggle('active', mode === 'ai');
       document.getElementById('tabLog').classList.toggle('active', mode === 'log');
+      document.getElementById('tabTag').classList.toggle('active', mode === 'tag');
+      if (mode === 'tag') loadTagJobs();
     }
 
     // ── 상수 및 변수 ──────────────────────────────
@@ -554,11 +603,101 @@
     const trimCurrentTime = document.getElementById('trimCurrentTime');
     const trimRangeInfo = document.getElementById('trimRangeInfo');
     const loopToggle = document.getElementById('loopToggle');
-    const clipFeatureSummary = document.getElementById('clipFeatureSummary');
     const markEventBtn = document.getElementById('markEventBtn');
     const clearEventBtn = document.getElementById('clearEventBtn');
     const currentEventInfo = document.getElementById('currentEventInfo');
     const eventTypeSelect = document.getElementById('eventTypeSelect');
+
+    // ── Shapley 피처 한글 라벨 ────────────────────────
+    const FEATURE_LABELS = {
+      // 룰 기반
+      'inv_dist_centroid_masked': '공격 집중도',
+      'player_density': '선수 밀집도',
+      'f_ball_accel': '공 가속도',
+      'f_ball_speed': '공 속도',
+      'f_players_near_ball': '공 주변 선수',
+      'f_audio': '관중 환호',
+      // ML 윈도우 피처
+      'inv_dist_centroid_masked_max': '공격 집중 (피크)',
+      'inv_dist_centroid_masked_mean': '공격 집중 (평균)',
+      'f_ball_speed_max': '공 속도 (피크)',
+      'f_ball_speed_anchor': '공 속도 (순간)',
+      'f_ball_accel_std': '공 가속 변동성',
+      'f_goalpost_visible_mean': '골대 시야 확보율',
+      'f_ball_dir_change_max': '공 방향전환 (피크)',
+      'f_ball_dir_change_mean': '공 방향전환 (평균)',
+      'f_possession_switches_mean': '점유권 전환 빈도',
+      'f_sprint_count_max': '스프린트 선수 수',
+      'f_ball_to_goal_width_ratio_mean': '공-골대 근접도',
+      'f_goal_bbox_width_norm_mean': '골대 확대 수준',
+      'f_players_near_ball_max': '공 근처 선수 (피크)',
+    };
+
+    // ── Shapley 바 차트 렌더링 ────────────────────────
+    // stats: {featureKey: value} (양수=기여, 음수=감점)
+    // compact: true면 상위 5개만, false면 전체
+    function drawShapChart(canvas, stats, compact = false) {
+      if (!canvas || !stats) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.offsetWidth || canvas.width;
+      const H = canvas.offsetHeight || canvas.height;
+      canvas.width = W;
+      canvas.height = H;
+      ctx.clearRect(0, 0, W, H);
+
+      const entries = Object.entries(stats)
+        .map(([k, v]) => ({ key: k, val: v }))
+        .sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
+
+      const shown = compact ? entries.slice(0, 5) : entries;
+      if (!shown.length) return;
+
+      const maxAbs = Math.max(...shown.map(e => Math.abs(e.val)), 1e-9);
+      const rowH = Math.floor(H / shown.length);
+      const labelW = compact ? 88 : 140;
+      const barAreaW = W - labelW - 8;
+      const midX = labelW + barAreaW * 0.5;
+
+      ctx.font = `${compact ? 10 : 12}px "Pretendard", system-ui, sans-serif`;
+
+      shown.forEach((e, i) => {
+        const y = i * rowH;
+        const barLen = (Math.abs(e.val) / maxAbs) * (barAreaW * 0.45);
+        const isPos = e.val >= 0;
+        const label = FEATURE_LABELS[e.key] || e.key;
+        const pct = (e.val * 100).toFixed(1);
+
+        // 라벨
+        ctx.fillStyle = '#c9b7a7';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, labelW - 4, y + rowH * 0.5);
+
+        // 바
+        const barX = isPos ? midX : midX - barLen;
+        const barY = y + rowH * 0.2;
+        const barH = rowH * 0.6;
+        ctx.fillStyle = isPos ? '#ff8a1d' : '#6ab4f5';
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(barX, barY, barLen, barH, 2) : ctx.rect(barX, barY, barLen, barH);
+        ctx.fill();
+
+        // 중심선
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(midX, y);
+        ctx.lineTo(midX, y + rowH);
+        ctx.stroke();
+
+        // 수치
+        if (!compact) {
+          ctx.fillStyle = isPos ? '#ffb37c' : '#90c8f8';
+          ctx.textAlign = isPos ? 'left' : 'right';
+          ctx.fillText(`${isPos ? '+' : ''}${pct}%`, isPos ? midX + barLen + 3 : midX - barLen - 3, y + rowH * 0.5);
+        }
+      });
+    }
 
     // 이벤트 타입 목록 (서버와 동기화)
     const EVENT_TYPE_LABELS = {
@@ -580,6 +719,8 @@
         const label = EVENT_TYPE_LABELS[t] || t;
         return `<option value="${t}">${label}</option>`;
       }).join('');
+      // 태깅 탭 셀렉트도 동기화
+      if (typeof populateTagEventTypes === 'function') populateTagEventTypes();
     }
     loadEventTypes();
 
@@ -813,12 +954,15 @@
         const ts = clip_timestamps[clip];
         const tsLabel = ts ? `⏱ ${fmtTime(ts.start)} ~ ${fmtTime(ts.end)}` : '';
 
+        const topFeatureKey = clip_features[clip] || '';
+        const topFeatureLabel = FEATURE_LABELS[topFeatureKey] || topFeatureKey || 'N/A';
         card.innerHTML = `
           ${catBadge}
           <div class="clip-index" title="스코어 순위">${rankLabel}${scoreLabel}</div>
-          <div class="clip-feature">${clip_features[clip] || 'N/A'}</div>
+          <div class="clip-feature" title="${topFeatureKey}">${topFeatureLabel}</div>
           <video controls src="${videoSrc}"></video>
           ${tsLabel ? `<div style="font-size:11px; color:#8a7c70; margin:4px 2px 2px; letter-spacing:0.3px;">${tsLabel}</div>` : ''}
+          <canvas class="shap-chart-mini"></canvas>
           <div class="clip-actions" style="flex-wrap:wrap; gap:6px;">
             <button class="classify-good-btn" style="flex:1; min-width:0; ${goodActive}">✓ Good</button>
             <button class="classify-bad-btn" style="flex:1; min-width:0; ${badActive}">✗ Bad</button>
@@ -828,6 +972,13 @@
           ${evBadge}
           <button class="secondary trim-btn" style="width:100%; margin-top:8px;">컷 편집 / 이벤트 지정</button>
         `;
+
+        // mini Shapley 차트 렌더링
+        const stats = clip_feature_stats[clip];
+        if (stats) {
+          const miniCanvas = card.querySelector('.shap-chart-mini');
+          requestAnimationFrame(() => drawShapChart(miniCanvas, stats, true));
+        }
 
         async function classifyAs(targetCat) {
           const res = await fetch(`/api/jobs/${job_id}/clips/${clip}/classify?category=${targetCat}`, {method:'POST'});
@@ -855,30 +1006,14 @@
         card.querySelector('.trim-btn').onclick = () => {
           currentTrimClip = { jobId: job_id, clip };
           const baseClip = trimmed[clip] ? trimmed[clip].from : clip;
-          const stats = clip_feature_stats[baseClip];
+          const stats = clip_feature_stats[baseClip] || clip_feature_stats[clip];
+          const shapArea = document.getElementById('shapChartArea');
+          const shapCanvas = document.getElementById('shapChartFull');
           if (stats) {
-            // [수정] 피처 이름 매핑 (한글화)
-            const labelMap = {
-              'f_ball_speed': '공 속도',
-              'f_ball_accel': '공 가속도',
-              'player_density': '선수 밀집도',
-              'f_motion': '움직임',
-              'f_audio': '환호성',
-              'f_goalpost_visible': '골대 시야',
-              'f_dist_centroid_to_goal': '골대와 거리(선수)',
-              'f_dist_ball_to_goal': '골대와 거리(공)'
-            };
-
-            const sorted = Object.entries(stats)
-              .sort((a, b) => b[1] - a[1])
-              .map(([key, value], idx) => {
-                const label = labelMap[key] || key;
-                return `${idx + 1}. ${label} ${(value * 100).toFixed(1)}%`;
-              })
-              .join(' · ');
-            clipFeatureSummary.textContent = `피처 기여도: ${sorted}`;
+            shapArea.style.display = '';
+            requestAnimationFrame(() => drawShapChart(shapCanvas, stats, false));
           } else {
-            clipFeatureSummary.textContent = '피처 기여도: 데이터 없음';
+            shapArea.style.display = 'none';
           }
           trimVideo.src = `/api/jobs/${job_id}/clips/${clip}/file`;
           trimModal.classList.add('active');
@@ -1164,6 +1299,132 @@
     };
 
     resetBtn.onclick = () => location.reload();
+
+    // ── 이벤트 태깅 탭 ────────────────────────────────
+    const tagJobSelect   = document.getElementById('tagJobSelect');
+    const tagLoadBtn     = document.getElementById('tagLoadBtn');
+    const tagVideo       = document.getElementById('tagVideo');
+    const tagCurrentTime = document.getElementById('tagCurrentTime');
+    const tagFrameInfo   = document.getElementById('tagFrameInfo');
+    const tagEventType   = document.getElementById('tagEventType');
+    const tagMarkBtn     = document.getElementById('tagMarkBtn');
+    const tagMarkList    = document.getElementById('tagMarkList');
+    const tagMarkListWrap= document.getElementById('tagMarkListWrap');
+    const tagMarkCount   = document.getElementById('tagMarkCount');
+    const tagVideoInfo   = document.getElementById('tagVideoInfo');
+    let tagJobId = null;
+    let tagFps   = 30.0;
+
+    function fmtTagTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      const tenths = Math.floor((sec % 1) * 10);
+      return `${m}:${String(s).padStart(2,'0')}.${tenths}`;
+    }
+
+    // 이벤트 타입 셀렉트 채우기
+    function populateTagEventTypes() {
+      tagEventType.innerHTML = EVENT_TYPES
+        .filter(t => t !== 'unknown')
+        .concat(['unknown'])
+        .map(t => `<option value="${t}">${EVENT_TYPE_LABELS[t] || t}</option>`)
+        .join('');
+      tagEventType.value = 'goal';
+    }
+    populateTagEventTypes();
+
+    async function loadTagJobs() {
+      try {
+        const res  = await fetch('/api/jobs');
+        const data = await res.json();
+        tagJobSelect.innerHTML = '<option value="">(영상 선택)</option>';
+        (data.jobs || []).filter(j => j.status === 'done').forEach(j => {
+          const src  = j.source_filename ? ` · ${j.source_filename}` : '';
+          const dt   = j.created_at ? new Date(j.created_at * 1000).toLocaleString('ko') : '';
+          const opt  = document.createElement('option');
+          opt.value  = j.job_id;
+          opt.textContent = `${j.job_id.slice(0,8)}${src} · ${dt}`;
+          tagJobSelect.appendChild(opt);
+        });
+      } catch(e) { console.error('태그 탭 job 목록 실패', e); }
+    }
+
+    tagLoadBtn.onclick = async () => {
+      const jobId = tagJobSelect.value;
+      if (!jobId) { alert('영상을 선택하세요.'); return; }
+      tagJobId = jobId;
+      const meta = await fetchJob(jobId);
+      tagFps = parseFloat(meta.fps || 30.0);
+      tagVideoInfo.textContent = meta.source_filename || '';
+      tagVideo.src = `/api/jobs/${jobId}/video`;
+      tagVideo.style.display = '';
+      tagMarkBtn.disabled = false;
+      await renderTagMarkList();
+    };
+
+    tagVideo.ontimeupdate = () => {
+      const t = tagVideo.currentTime;
+      tagCurrentTime.textContent = fmtTagTime(t);
+      tagFrameInfo.textContent   = `frame ${Math.round(t * tagFps)}  ·  fps ${tagFps.toFixed(1)}`;
+    };
+
+    // 키보드 단축키: 이벤트 태깅 탭에서 ← → 로 1초 이동, Shift+←→ 로 0.1초 이동
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('panelTag').style.display === 'none') return;
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
+      if (e.key === 'ArrowRight') { tagVideo.currentTime += e.shiftKey ? 0.1 : 1; e.preventDefault(); }
+      if (e.key === 'ArrowLeft')  { tagVideo.currentTime -= e.shiftKey ? 0.1 : 1; e.preventDefault(); }
+      if (e.key === ' ') { tagVideo.paused ? tagVideo.play() : tagVideo.pause(); e.preventDefault(); }
+    });
+
+    tagMarkBtn.onclick = async () => {
+      if (!tagJobId) return;
+      const res = await fetch(`/api/jobs/${tagJobId}/marks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_sec: tagVideo.currentTime, event_type: tagEventType.value }),
+      });
+      if (!res.ok) { alert((await res.json().catch(()=>({}))).detail || '태그 저장 실패'); return; }
+      await renderTagMarkList();
+    };
+
+    async function renderTagMarkList() {
+      if (!tagJobId) return;
+      const res  = await fetch(`/api/jobs/${tagJobId}/marks`);
+      const data = await res.json();
+      const marks = data.marks || {};
+      const sorted = Object.entries(marks).sort((a,b) => a[1].video_sec - b[1].video_sec);
+
+      tagMarkCount.textContent   = `${sorted.length}개`;
+      tagMarkListWrap.style.display = sorted.length ? '' : 'none';
+      tagMarkList.innerHTML = '';
+
+      sorted.forEach(([key, mark]) => {
+        const timeStr  = fmtTagTime(mark.video_sec);
+        const typeLabel = EVENT_TYPE_LABELS[mark.event_type] || mark.event_type;
+
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex; align-items:center; gap:10px; background:rgba(26,19,15,0.95); border:1px solid rgba(255,116,0,0.15); border-radius:8px; padding:8px 14px; cursor:pointer;';
+        item.innerHTML = `
+          <span style="font-size:17px; font-weight:700; color:#ff8a1d; min-width:64px; font-variant-numeric:tabular-nums;">${timeStr}</span>
+          <span style="flex:1; font-size:13px;">${typeLabel}</span>
+          <span style="font-size:11px; color:#8a7c70; white-space:nowrap;">frame ${mark.event_frame_original}</span>
+          <button class="secondary" style="padding:3px 10px; font-size:12px;" data-key="${key}">삭제</button>
+        `;
+        // 클릭 → 해당 시각으로 이동
+        item.addEventListener('click', e => {
+          if (e.target.tagName === 'BUTTON') return;
+          tagVideo.currentTime = mark.video_sec;
+          tagVideo.pause();
+        });
+        item.querySelector('button').onclick = async e => {
+          e.stopPropagation();
+          await fetch(`/api/jobs/${tagJobId}/marks/${encodeURIComponent(key)}`, { method: 'DELETE' });
+          await renderTagMarkList();
+        };
+        tagMarkList.appendChild(item);
+      });
+    }
   </script>
 </body>
 </html>

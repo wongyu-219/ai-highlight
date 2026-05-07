@@ -679,6 +679,78 @@ def list_event_marks() -> dict[str, Any]:
     return _load_event_marks()
 
 
+@app.get("/api/jobs/{job_id}/video")
+def serve_job_video(job_id: str):
+    """업로드된 원본 영상 스트리밍."""
+    _require_job(job_id)
+    metadata = _load_metadata(job_id)
+    source = metadata.get("source_filename") or ""
+    ext = Path(source).suffix if source else ".mp4"
+    video_path = UPLOADS_DIR / f"{job_id}{ext}"
+    if not video_path.exists():
+        video_path = UPLOADS_DIR / f"{job_id}.mp4"
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail="원본 영상 파일을 찾을 수 없습니다.")
+    return FileResponse(str(video_path), media_type="video/mp4",
+                        filename=Path(source).name if source else f"{job_id}.mp4")
+
+
+class ManualMarkBody(BaseModel):
+    video_sec: float
+    event_type: str = "unknown"
+
+
+@app.post("/api/jobs/{job_id}/marks")
+def create_job_mark(job_id: str, body: ManualMarkBody) -> dict[str, Any]:
+    """원본 영상 타임스탬프 기준 이벤트 수동 마킹 → event_marks.json 저장."""
+    _require_job(job_id)
+    metadata = _load_metadata(job_id)
+    fps = float(metadata.get("fps") or 30.0)
+
+    event_type = str(body.event_type).strip().lower() or "unknown"
+    if event_type not in EVENT_TYPE_SET:
+        event_type = "unknown"
+
+    frame = int(round(body.video_sec * fps))
+    mark_key = f"{job_id}_manual_{frame}"
+
+    marks = _load_event_marks()
+    marks[mark_key] = {
+        "mark_key": mark_key,
+        "job_id": job_id,
+        "fps": fps,
+        "video_sec": float(body.video_sec),
+        "event_frame_original": frame,
+        "event_type": event_type,
+        "is_manual": True,
+        "marked_at": time.time(),
+    }
+    _save_event_marks(marks)
+    return {"ok": True, "mark_key": mark_key, "mark": marks[mark_key]}
+
+
+@app.get("/api/jobs/{job_id}/marks")
+def list_job_marks(job_id: str) -> dict[str, Any]:
+    """해당 job의 수동 마킹 목록."""
+    _require_job(job_id)
+    marks = _load_event_marks()
+    job_marks = {k: v for k, v in marks.items()
+                 if v.get("job_id") == job_id and v.get("is_manual")}
+    return {"marks": job_marks}
+
+
+@app.delete("/api/jobs/{job_id}/marks/{mark_key}")
+def delete_job_mark(job_id: str, mark_key: str) -> dict[str, Any]:
+    """수동 마킹 삭제."""
+    _require_job(job_id)
+    marks = _load_event_marks()
+    if mark_key not in marks or marks[mark_key].get("job_id") != job_id:
+        raise HTTPException(status_code=404, detail="마크를 찾을 수 없습니다.")
+    del marks[mark_key]
+    _save_event_marks(marks)
+    return {"ok": True}
+
+
 @app.get("/api/event_types")
 def list_event_types() -> dict[str, Any]:
     """UI 드롭다운에 사용할 표준 이벤트 타입 목록."""
