@@ -147,6 +147,7 @@ python train_model.py
 ```
 
 **주의**: 새 경기 추출 시 이전 `.xgb` 파일이 있어도 `USE_XGB` 환경변수 없으면 자동으로 무시됩니다. 그래도 백업이 불안하면:
+ㅋ
 
 ```bash
 mv highlight_model.xgb highlight_model.lv1.xgb.bak   # 단계별 아카이브
@@ -252,6 +253,7 @@ USE_XGB=1 python extract.py
 yt-dlp -f 'bv[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]' \
   --downloader aria2c \
   --downloader-args "aria2c:-x 16 -s 16 -k 1M" \
-  "https://www.youtube.com/watch?v=n-Rg0JmSPVY"
+  "https://www.youtube.com/watch?v=Fug0Uvy9XAE"
 ```
+
 # ai-highlight

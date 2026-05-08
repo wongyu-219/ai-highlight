@@ -2776,5 +2776,169 @@
     "event_type": "goal",
     "is_manual": true,
     "marked_at": 1778136042.5404549
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_04.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_04.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 8834,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 279.76113333333336,
+    "event_time_in_clip_sec": 3.955858644676877,
+    "event_frame_original": 8503,
+    "event_type": "threat",
+    "marked_at": 1778229137.0037298
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_06.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_06.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 10346,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 330.21153333333336,
+    "event_time_in_clip_sec": 11.076995824342179,
+    "event_frame_original": 10228,
+    "event_type": "shot",
+    "marked_at": 1778229189.875736
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_07.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_07.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 13692,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 441.8564,
+    "event_time_in_clip_sec": 3.37363056634538,
+    "event_frame_original": 13344,
+    "event_type": "shot",
+    "marked_at": 1778229212.765773
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_08.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_08.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 19691,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 642.0230333333334,
+    "event_time_in_clip_sec": 12.163823024994855,
+    "event_frame_original": 19606,
+    "event_type": "shot",
+    "marked_at": 1778229239.657421
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_11.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_11.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 25361,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 831.2120333333334,
+    "event_time_in_clip_sec": 13.246346439329415,
+    "event_frame_original": 25308,
+    "event_type": "shot",
+    "marked_at": 1778229343.2052789
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_15.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_15.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 30555,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 1004.5185,
+    "event_time_in_clip_sec": 4.451439375667179,
+    "event_frame_original": 30239,
+    "event_type": "threat",
+    "marked_at": 1778229405.9383008
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_16.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_16.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 31010,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 1019.7003333333334,
+    "event_time_in_clip_sec": 17.647884455674205,
+    "event_frame_original": 31089,
+    "event_type": "goal",
+    "marked_at": 1778229433.8109398
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_17.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_17.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 33299,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 1096.0766333333333,
+    "event_time_in_clip_sec": 4.608598571996491,
+    "event_frame_original": 32988,
+    "event_type": "shot",
+    "marked_at": 1778229448.624981
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_18.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_18.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 39956,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 1318.1985333333334,
+    "event_time_in_clip_sec": 15.060503431997144,
+    "event_frame_original": 39958,
+    "event_type": "shot",
+    "marked_at": 1778229470.2385201
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_20.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_20.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 44254,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 1461.6084666666668,
+    "event_time_in_clip_sec": 7.871306902675119,
+    "event_frame_original": 44040,
+    "event_type": "shot",
+    "marked_at": 1778229563.433334
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_23.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_23.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 48986,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 1619.4995333333334,
+    "event_time_in_clip_sec": 11.719090457326109,
+    "event_frame_original": 48888,
+    "event_type": "threat",
+    "marked_at": 1778229622.385464
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_25.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_25.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 64351,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 2132.1783666666665,
+    "event_time_in_clip_sec": 8.638673851329788,
+    "event_frame_original": 64160,
+    "event_type": "shot",
+    "marked_at": 1778229647.128837
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_28.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_28.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 69307,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 2297.5435666666667,
+    "event_time_in_clip_sec": 11.207561348333813,
+    "event_frame_original": 69193,
+    "event_type": "threat",
+    "marked_at": 1778229698.575069
+  },
+  "113f50ca6d034c02b1f7153394604a4f_0508_1714_40.mp4": {
+    "clip_name": "113f50ca6d034c02b1f7153394604a4f_0508_1714_40.mp4",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "anchor_frame": 85589,
+    "fps": 29.97002997002997,
+    "clip_start_sec": 2840.8196333333335,
+    "event_time_in_clip_sec": 8.254404543658461,
+    "event_frame_original": 85387,
+    "event_type": "threat",
+    "marked_at": 1778229907.682369
+  },
+  "113f50ca6d034c02b1f7153394604a4f_manual_77530": {
+    "mark_key": "113f50ca6d034c02b1f7153394604a4f_manual_77530",
+    "job_id": "113f50ca6d034c02b1f7153394604a4f",
+    "fps": 29.97002997002997,
+    "video_sec": 2586.930071744675,
+    "event_frame_original": 77530,
+    "event_type": "goal",
+    "is_manual": true,
+    "marked_at": 1778229968.279336
   }
 }
