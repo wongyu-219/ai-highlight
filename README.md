@@ -159,7 +159,7 @@ mv highlight_model.xgb highlight_model.lv1.xgb.bak   # 단계별 아카이브
 
 ```bash
 # 실사용 모드로 서버 기동
-USE_XGB=1 python -m uvicorn app.server:app --reload
+1
 ```
 
 웹 헤더에 🟢 `XGB ON` 배지 확인.
