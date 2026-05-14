@@ -12,7 +12,7 @@ import numpy as np
 from fastapi import BackgroundTasks, Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from moviepy import VideoFileClip, concatenate_videoclips
+from moviepy import VideoFileClip, ImageClip, concatenate_videoclips, vfx
 from pydantic import BaseModel
 
 from extract import run_highlight_pipeline, USE_XGB
@@ -30,6 +30,8 @@ EXPORTS_DIR = BASE_DIR / "exports"
 HIGHLIGHTS_DIR = BASE_DIR / "highlights"
 MODEL_PATH = BASE_DIR / "best-8.pt"
 EVENT_MARKS_PATH = BASE_DIR / "event_marks.json"
+BGM_DIR = BASE_DIR / "app" / "static" / "bgm"
+BGM_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_HIGHLIGHT_COUNT = 40
 DEFAULT_MIN_INTERVAL = 15
 
@@ -583,9 +585,17 @@ def trim_clip(job_id: str, clip_name: str, start: float = 0.0, end: float = 0.0)
     metadata.setdefault("clips", []).append(trimmed_path.name)
     metadata.setdefault("selected", {})[trimmed_path.name] = False
     metadata.setdefault("trimmed", {})[trimmed_path.name] = {"from": clip_name, "start": start, "end": end_time}
-    _save_metadata(job_id, metadata)
 
-    return {"ok": True, "clip": trimmed_path.name}
+    # 원본 영상 기준 타임스탬프: 부모 클립의 video_start + 트림 오프셋
+    orig_ts = (metadata.get("clip_timestamps") or {}).get(clip_name) or {}
+    orig_video_start = float(orig_ts.get("start", 0.0))
+    metadata.setdefault("clip_timestamps", {})[trimmed_path.name] = {
+        "start": round(orig_video_start + start, 1),
+        "end":   round(orig_video_start + end_time, 1),
+    }
+
+    _save_metadata(job_id, metadata)
+    return {"ok": True, "clip": trimmed_path.name, "video_start": round(orig_video_start + start, 1), "video_end": round(orig_video_start + end_time, 1)}
 
 
 @app.post("/api/jobs/{job_id}/clips/{clip_name}/event")
@@ -763,8 +773,73 @@ def get_mode() -> dict[str, Any]:
     return {"use_xgb": bool(USE_XGB)}
 
 
+@app.get("/api/bgm")
+def list_bgm() -> dict[str, Any]:
+    """app/static/bgm/ 폴더의 BGM 파일 목록 반환."""
+    tracks = sorted(
+        f.name for f in BGM_DIR.iterdir()
+        if f.is_file() and f.suffix.lower() in {".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac"}
+    )
+    return {"tracks": tracks}
+
+
+def _apply_transitions(clips: list, t: float) -> tuple[list, float]:
+    """클립 목록에 크로스페이드 트랜지션 적용. (수정된 클립 리스트, padding값) 반환."""
+    if t <= 0 or len(clips) <= 1:
+        return clips, 0.0
+    min_dur = min(c.duration for c in clips)
+    t = min(t, min_dur / 2.5)
+    result = []
+    for i, clip in enumerate(clips):
+        effects = []
+        if i > 0:
+            effects.append(vfx.CrossFadeIn(t))
+        if i < len(clips) - 1:
+            effects.append(vfx.CrossFadeOut(t))
+        result.append(clip.with_effects(effects) if effects else clip)
+    return result, -t
+
+
+BGM_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac"}
+
+
+def _mix_bgm(merged_clip, bgm_name: str, bgm_volume: float):
+    """최종 합쳐진 클립에 BGM을 믹스해 반환. 원본 오디오는 유지."""
+    from moviepy import AudioFileClip, CompositeAudioClip
+
+    bgm_path = BGM_DIR / bgm_name
+    if not bgm_path.exists() or bgm_path.suffix.lower() not in BGM_EXTENSIONS:
+        return merged_clip
+
+    total_dur = merged_clip.duration
+    bgm_raw = AudioFileClip(str(bgm_path))
+
+    # BGM이 영상보다 짧으면 루프, 길면 트림
+    if bgm_raw.duration < total_dur:
+        loops = int(total_dur / bgm_raw.duration) + 1
+        from moviepy import concatenate_audioclips
+        bgm_raw = concatenate_audioclips([bgm_raw] * loops)
+    bgm_clip = bgm_raw.subclipped(0, total_dur)
+
+    # 끝에서 2초 페이드 아웃
+    fade_dur = min(2.0, total_dur * 0.1)
+    bgm_clip = bgm_clip.with_effects([vfx.AudioFadeOut(fade_dur)])
+    bgm_clip = bgm_clip.with_volume_scaled(max(0.0, min(bgm_volume, 2.0)))
+
+    if merged_clip.audio is not None:
+        mixed = CompositeAudioClip([merged_clip.audio, bgm_clip])
+    else:
+        mixed = bgm_clip
+
+    return merged_clip.with_audio(mixed)
+
+
 class ExportOrderBody(BaseModel):
     clip_order: list[str] | None = None
+    transition_sec: float = 0.5
+    audio_volume: float = 1.0
+    bgm_name: str = ""
+    bgm_volume: float = 0.3
 
 
 @app.post("/api/jobs/{job_id}/export")
@@ -777,6 +852,9 @@ def export_selected(job_id: str, body: ExportOrderBody | None = Body(default=Non
         selected_clips = [name for name in body.clip_order if selected.get(name)]
     else:
         selected_clips = [name for name, is_selected in selected.items() if is_selected]
+        # 시간순 자동 정렬: clip_timestamps.start 기준, 없으면 파일명 순
+        ts = metadata.get("clip_timestamps") or {}
+        selected_clips.sort(key=lambda n: ts.get(n, {}).get("start", float("inf")))
 
     if not selected_clips:
         raise HTTPException(status_code=400, detail="선택된 클립이 없습니다.")
@@ -786,8 +864,18 @@ def export_selected(job_id: str, body: ExportOrderBody | None = Body(default=Non
     if not clip_paths:
         raise HTTPException(status_code=404, detail="선택된 클립 파일을 찾을 수 없습니다.")
 
+    # 트랜지션·BGM은 실사용 모드(USE_XGB=1)에서만 적용
+    transition_sec = (body.transition_sec if body and USE_XGB else 0.0)
+    audio_volume = max(0.0, min(float(body.audio_volume if body else 1.0), 2.0))
+    bgm_name = (body.bgm_name if body and USE_XGB else "")
+    bgm_volume = (body.bgm_volume if body else 0.3)
     video_clips = [VideoFileClip(str(path)) for path in clip_paths]
-    merged = concatenate_videoclips(video_clips, method="compose")
+    final_clips, padding = _apply_transitions(video_clips, transition_sec)
+    merged = concatenate_videoclips(final_clips, padding=padding, method="compose")
+    if audio_volume != 1.0 and merged.audio is not None:
+        merged = merged.with_volume_scaled(audio_volume)
+    if bgm_name:
+        merged = _mix_bgm(merged, bgm_name, bgm_volume)
     output_path = job_dir / "merged_selected.mp4"
     merged.write_videofile(str(output_path), codec="libx264", audio_codec="aac", temp_audiofile="temp-merged-audio.m4a", remove_temp=True)
 
@@ -796,6 +884,144 @@ def export_selected(job_id: str, body: ExportOrderBody | None = Body(default=Non
     merged.close()
 
     metadata["merged"] = output_path.name
+    _save_metadata(job_id, metadata)
+    return {"ok": True, "merged": output_path.name}
+
+
+@app.post("/api/jobs/{job_id}/image-cards")
+async def upload_image_card(job_id: str, file: UploadFile = File(...)) -> dict[str, Any]:
+    """이미지 카드 업로드 (타이틀 카드 등)."""
+    _require_job(job_id)
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="파일이 없습니다.")
+    safe_name = Path(file.filename).name
+    ext = Path(safe_name).suffix.lower()
+    if ext not in {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}:
+        raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다 (jpg/png/gif/bmp/webp).")
+    img_dir = _job_dir(job_id) / "image_cards"
+    img_dir.mkdir(exist_ok=True, parents=True)
+    saved = img_dir / safe_name
+    with saved.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+    return {"ok": True, "name": safe_name}
+
+
+@app.get("/api/jobs/{job_id}/image-cards")
+def list_image_cards(job_id: str) -> dict[str, Any]:
+    """업로드된 이미지 카드 목록."""
+    _require_job(job_id)
+    img_dir = _job_dir(job_id) / "image_cards"
+    if not img_dir.exists():
+        return {"cards": []}
+    cards = sorted(f.name for f in img_dir.iterdir() if f.is_file())
+    return {"cards": cards}
+
+
+@app.delete("/api/jobs/{job_id}/image-cards/{filename}")
+def delete_image_card(job_id: str, filename: str) -> dict[str, Any]:
+    """이미지 카드 삭제."""
+    _require_job(job_id)
+    if "/" in filename or "\\" in filename or filename.startswith(".."):
+        raise HTTPException(status_code=400, detail="잘못된 파일명")
+    img_path = _job_dir(job_id) / "image_cards" / filename
+    if not img_path.exists():
+        raise HTTPException(status_code=404, detail="이미지 카드를 찾을 수 없습니다.")
+    img_path.unlink()
+    return {"ok": True}
+
+
+class TimelineItem(BaseModel):
+    type: str  # 'clip' | 'image'
+    name: str
+    duration: float = 3.0  # 이미지 카드 표시 시간 (초)
+
+
+class TimelineExportBody(BaseModel):
+    timeline: list[TimelineItem]
+    transition_sec: float = 0.5
+    audio_volume: float = 1.0
+    bgm_name: str = ""
+    bgm_volume: float = 0.3
+
+
+@app.post("/api/jobs/{job_id}/export/timeline")
+def export_timeline(job_id: str, body: TimelineExportBody) -> dict[str, Any]:
+    """편집기 타임라인 (영상 클립 + 이미지 카드 혼합) → 최종 영상 합치기."""
+    job_dir = _require_job(job_id)
+    items = body.timeline
+
+    if not items:
+        raise HTTPException(status_code=400, detail="타임라인이 비어 있습니다.")
+
+    # 첫 번째 영상 클립에서 해상도·fps 결정
+    video_size = None
+    fps = 30.0
+    for item in items:
+        if item.type == "clip":
+            clip_path, _ = _locate_clip(job_id, item.name)
+            if clip_path is None:
+                raise HTTPException(status_code=404, detail=f"클립 없음: {item.name}")
+            tmp = VideoFileClip(str(clip_path))
+            video_size = tmp.size
+            fps = float(tmp.fps or 30.0)
+            tmp.close()
+            break
+
+    if video_size is None:
+        raise HTTPException(status_code=400, detail="영상 클립이 최소 1개 필요합니다.")
+
+    final_clips = []
+    try:
+        for item in items:
+            if item.type == "clip":
+                clip_path, _ = _locate_clip(job_id, item.name)
+                if clip_path is None:
+                    raise HTTPException(status_code=404, detail=f"클립 없음: {item.name}")
+                final_clips.append(VideoFileClip(str(clip_path)))
+            elif item.type == "image":
+                img_path = job_dir / "image_cards" / item.name
+                if "image_cards" not in str(img_path) or not img_path.resolve().is_relative_to(job_dir.resolve()):
+                    raise HTTPException(status_code=400, detail="잘못된 이미지 경로")
+                if not img_path.exists():
+                    raise HTTPException(status_code=404, detail=f"이미지 없음: {item.name}")
+                duration = max(0.5, min(float(item.duration), 60.0))
+                img_clip = ImageClip(str(img_path), duration=duration)
+                try:
+                    img_clip = img_clip.resized(video_size)
+                except AttributeError:
+                    img_clip = img_clip.resize(video_size)
+                img_clip = img_clip.with_fps(fps)
+                final_clips.append(img_clip)
+            else:
+                raise HTTPException(status_code=400, detail=f"알 수 없는 타입: {item.type}")
+
+        # 트랜지션·BGM은 실사용 모드(USE_XGB=1)에서만 적용
+        t_sec = body.transition_sec if USE_XGB else 0.0
+        audio_vol = max(0.0, min(float(body.audio_volume), 2.0))
+        transition_clips, padding = _apply_transitions(final_clips, t_sec)
+        merged = concatenate_videoclips(transition_clips, padding=padding, method="compose")
+        if audio_vol != 1.0 and merged.audio is not None:
+            merged = merged.with_volume_scaled(audio_vol)
+        if body.bgm_name and USE_XGB:
+            merged = _mix_bgm(merged, body.bgm_name, body.bgm_volume)
+        output_path = job_dir / "merged_timeline.mp4"
+        merged.write_videofile(
+            str(output_path),
+            codec="libx264",
+            audio_codec="aac",
+            temp_audiofile="temp-timeline-audio.m4a",
+            remove_temp=True,
+        )
+        merged.close()
+    finally:
+        for c in final_clips:
+            try:
+                c.close()
+            except Exception:
+                pass
+
+    metadata = _load_metadata(job_id)
+    metadata["merged_timeline"] = output_path.name
     _save_metadata(job_id, metadata)
     return {"ok": True, "merged": output_path.name}
 

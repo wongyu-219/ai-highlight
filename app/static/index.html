@@ -367,6 +367,60 @@
     .shap-legend span { display: flex; align-items: center; gap: 4px; }
     .shap-legend .dot-pos { width: 10px; height: 10px; border-radius: 2px; background: #ff8a1d; }
     .shap-legend .dot-neg { width: 10px; height: 10px; border-radius: 2px; background: #6ab4f5; }
+    /* ── 편집기 타임라인 ── */
+    .editor-timeline-wrap {
+      border: 1px solid rgba(255,116,0,0.12); border-radius: 12px;
+      padding: 12px; min-height: 160px; overflow-x: auto;
+      background: rgba(0,0,0,0.25);
+    }
+    #editorTimeline {
+      display: flex; flex-direction: row; gap: 10px;
+      min-height: 136px; align-items: flex-start; flex-wrap: nowrap;
+    }
+    .tl-item {
+      flex: 0 0 auto; width: 130px;
+      background: rgba(26,19,15,0.95);
+      border: 1px solid rgba(255,116,0,0.2);
+      border-radius: 10px; padding: 8px;
+      cursor: grab; user-select: none;
+      position: relative; transition: border-color 0.15s;
+    }
+    .tl-item:hover { border-color: rgba(255,116,0,0.45); }
+    .tl-item.drag-over { border-color: #ff8a1d; background: rgba(255,116,0,0.08); }
+    .tl-item.dragging { opacity: 0.4; }
+    .tl-thumb-wrap {
+      width: 100%; aspect-ratio: 16/9; background: #000;
+      border-radius: 6px; overflow: hidden;
+    }
+    .tl-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .tl-info { margin-top: 5px; }
+    .tl-name {
+      font-size: 10px; color: #c9b7a7; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; margin-bottom: 2px;
+    }
+    .tl-type { font-size: 10px; font-weight: 700; margin-bottom: 3px; }
+    .tl-type.clip { color: #ff8a1d; }
+    .tl-type.image { color: #7ee3a8; }
+    .tl-duration-row {
+      display: flex; align-items: center; gap: 3px;
+      font-size: 11px; color: #8a7c70; margin-top: 3px;
+    }
+    .tl-duration-input {
+      width: 44px; padding: 2px 4px; border-radius: 4px;
+      border: 1px solid rgba(255,116,0,0.3);
+      background: #1b0f07; color: #f5efe8; font-size: 11px;
+    }
+    .tl-del-btn {
+      position: absolute; top: 3px; right: 3px;
+      padding: 0; width: 18px; height: 18px;
+      border-radius: 50%; font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(43,32,24,0.9);
+      border: 1px solid rgba(255,116,0,0.2);
+      cursor: pointer; color: #f5efe8; line-height: 1;
+      box-shadow: none;
+    }
+    .tl-del-btn:hover { background: #c62828; border-color: transparent; }
   </style>
 </head>
 <body>
@@ -389,6 +443,7 @@
         <button class="tab-btn active" id="tabAI" onclick="switchTab('ai')">AI 탐지</button>
         <button class="tab-btn" id="tabLog" onclick="switchTab('log')">로그 + AI</button>
         <button class="tab-btn" id="tabTag" onclick="switchTab('tag')">이벤트 태깅</button>
+        <button class="tab-btn" id="tabEditor" onclick="switchTab('editor')">편집기</button>
       </div>
 
       <!-- AI 탐지 폼 -->
@@ -458,6 +513,60 @@
         </div>
       </div>
 
+      <!-- 편집기 패널 -->
+      <div id="panelEditor" style="display:none;">
+        <div class="row" style="margin-bottom:12px; gap:10px; flex-wrap:wrap;">
+          <label class="muted" style="display:flex; align-items:center; gap:6px;">
+            영상 선택
+            <select id="editorJobSelect" class="event-type-select" style="min-width:260px;">
+              <option value="">(분석 완료된 영상 선택)</option>
+            </select>
+          </label>
+          <button id="editorLoadBtn" class="secondary">클립 불러오기</button>
+          <span class="badge" id="editorItemCount">0개</span>
+        </div>
+        <!-- 가로 스크롤 타임라인 -->
+        <div class="editor-timeline-wrap">
+          <div id="editorTimeline">
+            <span id="editorEmpty" class="muted" style="font-size:13px; align-self:center; padding:0 12px;">
+              클립을 불러오거나 이미지 카드를 추가하세요. 드래그로 순서를 변경할 수 있습니다.
+            </span>
+          </div>
+        </div>
+        <!-- 하단 컨트롤 -->
+        <div class="row" style="margin-top:12px; flex-wrap:wrap; gap:10px; align-items:center;">
+          <input type="file" id="imageCardInput" accept="image/*" style="display:none;">
+          <button id="imageCardAddBtn" class="secondary">이미지 카드 추가</button>
+          <span class="muted" style="font-size:12px;">전반전 / 후반전 타이틀 이미지 등을 클립 사이에 삽입</span>
+          <div style="flex:1;"></div>
+          <span id="editorEffectsWrap" style="display:none; align-items:center; gap:10px; flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#ccc;">
+              전환
+              <input type="range" id="editorTransitionSec" min="0" max="1.5" step="0.1" value="0.5" style="width:70px;accent-color:#ff7400;">
+              <span id="editorTransitionLabel">0.5s</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#ccc;">
+              중계음
+              <input type="range" id="editorAudioVolume" min="0" max="2" step="0.05" value="1" style="width:70px;accent-color:#ff7400;">
+              <span id="editorAudioVolumeLabel">1.0</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#ccc;">
+              BGM
+              <select id="editorBgmSelect" style="background:#1e1e1e;color:#f5efe8;border:1px solid #444;border-radius:4px;padding:2px 6px;font-size:13px;">
+                <option value="">없음</option>
+              </select>
+            </label>
+            <label id="editorBgmVolWrap" style="display:none;align-items:center;gap:6px;font-size:13px;color:#ccc;">
+              BGM 볼륨
+              <input type="range" id="editorBgmVolume" min="0" max="1" step="0.05" value="0.3" style="width:70px;accent-color:#ff7400;">
+              <span id="editorBgmVolumeLabel">0.3</span>
+            </label>
+          </span>
+          <button id="editorExportBtn">합치기 &amp; 다운로드</button>
+        </div>
+        <div class="muted" id="editorExportInfo" style="margin-top:6px; font-size:13px;"></div>
+      </div>
+
       <!-- 공통: 기존 Run 불러오기 -->
       <div class="row" style="margin-top: 10px; gap: 8px; flex-wrap: wrap;">
         <label class="muted" style="display:flex; align-items:center; gap:6px;">
@@ -488,6 +597,29 @@
             </select>
           </label>
           <span class="badge" id="selectedCount">선택 0개</span>
+          <span id="mergeEffectsWrap" style="display:none; align-items:center; gap:10px; flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#ccc;">
+              전환
+              <input type="range" id="mergeTransitionSec" min="0" max="1.5" step="0.1" value="0.5" style="width:70px;accent-color:#ff7400;">
+              <span id="mergeTransitionLabel">0.5s</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#ccc;">
+              중계음
+              <input type="range" id="mergeAudioVolume" min="0" max="2" step="0.05" value="1" style="width:70px;accent-color:#ff7400;">
+              <span id="mergeAudioVolumeLabel">1.0</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#ccc;">
+              BGM
+              <select id="mergeBgmSelect" style="background:#1e1e1e;color:#f5efe8;border:1px solid #444;border-radius:4px;padding:2px 6px;font-size:13px;">
+                <option value="">없음</option>
+              </select>
+            </label>
+            <label id="mergeBgmVolWrap" style="display:none;align-items:center;gap:6px;font-size:13px;color:#ccc;">
+              BGM 볼륨
+              <input type="range" id="mergeBgmVolume" min="0" max="1" step="0.05" value="0.3" style="width:70px;accent-color:#ff7400;">
+              <span id="mergeBgmVolumeLabel">0.3</span>
+            </label>
+          </span>
           <button id="mergeBtn">선택 클립 합치기</button>
           <button id="exportBtn" class="secondary">선택 클립 따로 저장</button>
         </div>
@@ -553,13 +685,16 @@
   <script>
     // ── 탭 전환 ──────────────────────────────────
     function switchTab(mode) {
-      document.getElementById('panelAI').style.display  = mode === 'ai'  ? '' : 'none';
-      document.getElementById('panelLog').style.display = mode === 'log' ? '' : 'none';
-      document.getElementById('panelTag').style.display = mode === 'tag' ? '' : 'none';
+      document.getElementById('panelAI').style.display     = mode === 'ai'     ? '' : 'none';
+      document.getElementById('panelLog').style.display    = mode === 'log'    ? '' : 'none';
+      document.getElementById('panelTag').style.display    = mode === 'tag'    ? '' : 'none';
+      document.getElementById('panelEditor').style.display = mode === 'editor' ? '' : 'none';
       document.getElementById('tabAI').classList.toggle('active', mode === 'ai');
       document.getElementById('tabLog').classList.toggle('active', mode === 'log');
       document.getElementById('tabTag').classList.toggle('active', mode === 'tag');
+      document.getElementById('tabEditor').classList.toggle('active', mode === 'editor');
       if (mode === 'tag') loadTagJobs();
+      if (mode === 'editor') initEditor();
     }
 
     // ── 상수 및 변수 ──────────────────────────────
@@ -578,6 +713,30 @@
       modeBadge.title = on
         ? '실사용 모드. 학습 데이터는 이 모드로 수집하지 마세요 (확증 편향).'
         : '학습 데이터 수집 모드. 룰 기반 스코어만 사용.';
+      // 실사용 모드(XGB=1)에서는 이벤트 태깅 탭 숨김 (학습 데이터 수집 기능)
+      if (on) {
+        document.getElementById('tabTag').style.display = 'none';
+        document.getElementById('panelTag').style.display = 'none';
+      }
+      // 트랜지션·BGM UI는 실사용 모드(XGB=1)에서만 표시
+      const mergeEffectsWrap = document.getElementById('mergeEffectsWrap');
+      const editorEffectsWrap = document.getElementById('editorEffectsWrap');
+      if (on) {
+        mergeEffectsWrap.style.display = 'flex';
+        editorEffectsWrap.style.display = 'flex';
+        // BGM 목록 로드
+        fetch('/api/bgm').then(r => r.json()).then(d => {
+          const tracks = d.tracks || [];
+          [document.getElementById('mergeBgmSelect'), document.getElementById('editorBgmSelect')].forEach(sel => {
+            tracks.forEach(name => {
+              const opt = document.createElement('option');
+              opt.value = name;
+              opt.textContent = name.replace(/\.[^.]+$/, '');
+              sel.appendChild(opt);
+            });
+          });
+        });
+      }
     }).catch(() => {
       modeBadgeText.textContent = '모드 확인 실패';
     });
@@ -1071,9 +1230,16 @@
       trimModalInfo.textContent = '적용 중...';
       const res = await fetch(`/api/jobs/${currentTrimClip.jobId}/clips/${currentTrimClip.clip}/trim?start=${trimStart}&end=${trimEnd}`, {method:'POST'});
       if (res.ok) {
-        trimModalInfo.textContent = '저장 완료!';
-        const refreshed = await fetchJob(currentTrimClip.jobId); renderClips(refreshed);
-        setTimeout(() => trimModal.classList.remove('active'), 1000);
+        const data = await res.json();
+        const refreshed = await fetchJob(currentTrimClip.jobId);
+        renderClips(refreshed);
+        // 저장된 클립의 원본 영상 기준 타임스탬프 표시
+        const ts = (refreshed.clip_timestamps || {})[data.clip];
+        const tsMsg = ts
+          ? ` · 원본 영상 기준 ${fmtTime(ts.start)} ~ ${fmtTime(ts.end)}`
+          : (data.video_start != null ? ` · 원본 영상 기준 ${fmtTime(data.video_start)} ~ ${fmtTime(data.video_end)}` : '');
+        trimModalInfo.innerHTML = `<span style="color:#7ee3a8; font-weight:700;">저장 완료!</span><span style="color:#8a7c70;">${tsMsg}</span>`;
+        setTimeout(() => trimModal.classList.remove('active'), 2500);
       }
     };
 
@@ -1268,13 +1434,32 @@
       }, 3000);
     }
 
+    const mergeTransitionInput = document.getElementById('mergeTransitionSec');
+    const mergeTransitionLabel = document.getElementById('mergeTransitionLabel');
+    mergeTransitionInput.oninput = () => { mergeTransitionLabel.textContent = `${mergeTransitionInput.value}s`; };
+
+    const mergeAudioVolInput = document.getElementById('mergeAudioVolume');
+    const mergeAudioVolLabel = document.getElementById('mergeAudioVolumeLabel');
+    mergeAudioVolInput.oninput = () => { mergeAudioVolLabel.textContent = parseFloat(mergeAudioVolInput.value).toFixed(2); };
+
+    const mergeBgmSelect = document.getElementById('mergeBgmSelect');
+    const mergeBgmVolInput = document.getElementById('mergeBgmVolume');
+    const mergeBgmVolLabel = document.getElementById('mergeBgmVolumeLabel');
+    const mergeBgmVolWrap = document.getElementById('mergeBgmVolWrap');
+    mergeBgmSelect.onchange = () => { mergeBgmVolWrap.style.display = mergeBgmSelect.value ? 'flex' : 'none'; };
+    mergeBgmVolInput.oninput = () => { mergeBgmVolLabel.textContent = parseFloat(mergeBgmVolInput.value).toFixed(2); };
+
     mergeBtn.onclick = async () => {
       if (!currentJobId) return;
       mergeInfo.textContent = '합치는 중...';
+      const transitionSec = parseFloat(mergeTransitionInput.value);
+      const audioVolume = parseFloat(mergeAudioVolInput.value);
+      const bgmName = mergeBgmSelect.value;
+      const bgmVolume = parseFloat(mergeBgmVolInput.value);
       const res = await fetch(`/api/jobs/${currentJobId}/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clip_order: clipOrder.length ? clipOrder : null }),
+        body: JSON.stringify({ clip_order: clipOrder.length ? clipOrder : null, transition_sec: transitionSec, audio_volume: audioVolume, bgm_name: bgmName, bgm_volume: bgmVolume }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -1423,6 +1608,184 @@
           await renderTagMarkList();
         };
         tagMarkList.appendChild(item);
+      });
+    }
+
+    // ── 편집기 탭 ────────────────────────────────────
+    let editorItems = [];   // [{type:'clip'|'image', name, jobId, duration?}]
+    let editorJobId  = null;
+    let editorInited = false;
+
+    async function initEditor() {
+      const sel = document.getElementById('editorJobSelect');
+      if (!editorInited) {
+        editorInited = true;
+        try {
+          const res  = await fetch('/api/jobs');
+          const data = await res.json();
+          (data.jobs || []).filter(j => j.status === 'done').forEach(j => {
+            const src = j.source_filename ? ` · ${j.source_filename}` : '';
+            const dt  = j.created_at ? new Date(j.created_at * 1000).toLocaleString('ko') : '';
+            const opt = document.createElement('option');
+            opt.value = j.job_id;
+            opt.textContent = `${j.job_id.slice(0,8)}${src} · ${dt}`;
+            sel.appendChild(opt);
+          });
+        } catch(e) { console.error('편집기 job 목록 실패', e); }
+      }
+      if (currentJobId && !sel.value) sel.value = currentJobId;
+    }
+
+    document.getElementById('editorLoadBtn').onclick = async () => {
+      const jobId = document.getElementById('editorJobSelect').value;
+      if (!jobId) { alert('영상을 선택하세요.'); return; }
+      editorJobId = jobId;
+      const meta     = await fetchJob(jobId);
+      const clips    = meta.clips || [];
+      const selected = meta.selected || {};
+
+      // 현재 job의 clipOrder가 있으면 그 순서를 따름
+      const ordered = (currentJobId === jobId && clipOrder.length)
+        ? clipOrder.filter(n => clips.includes(n))
+        : clips;
+      const pick = ordered.filter(n => selected[n]);
+      editorItems = (pick.length ? pick : ordered).map(n => ({type:'clip', name:n, jobId}));
+      renderEditorTimeline();
+    };
+
+    document.getElementById('imageCardAddBtn').onclick = () => {
+      document.getElementById('imageCardInput').click();
+    };
+
+    document.getElementById('imageCardInput').onchange = async (e) => {
+      if (!editorJobId) { alert('먼저 클립을 불러오세요.'); e.target.value = ''; return; }
+      const file = e.target.files[0];
+      if (!file) return;
+      const info = document.getElementById('editorExportInfo');
+      info.textContent = '이미지 업로드 중...';
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`/api/jobs/${editorJobId}/image-cards`, {method:'POST', body:fd});
+      if (!res.ok) {
+        info.textContent = '이미지 업로드 실패';
+        e.target.value = '';
+        return;
+      }
+      const data = await res.json();
+      info.textContent = '';
+      editorItems.push({type:'image', name:data.name, jobId:editorJobId, duration:3.0});
+      renderEditorTimeline();
+      e.target.value = '';
+    };
+
+    const editorTransitionInput = document.getElementById('editorTransitionSec');
+    const editorTransitionLabel = document.getElementById('editorTransitionLabel');
+    editorTransitionInput.oninput = () => { editorTransitionLabel.textContent = `${editorTransitionInput.value}s`; };
+
+    const editorAudioVolInput = document.getElementById('editorAudioVolume');
+    const editorAudioVolLabel = document.getElementById('editorAudioVolumeLabel');
+    editorAudioVolInput.oninput = () => { editorAudioVolLabel.textContent = parseFloat(editorAudioVolInput.value).toFixed(2); };
+
+    const editorBgmSelect = document.getElementById('editorBgmSelect');
+    const editorBgmVolInput = document.getElementById('editorBgmVolume');
+    const editorBgmVolLabel = document.getElementById('editorBgmVolumeLabel');
+    const editorBgmVolWrap = document.getElementById('editorBgmVolWrap');
+    editorBgmSelect.onchange = () => { editorBgmVolWrap.style.display = editorBgmSelect.value ? 'flex' : 'none'; };
+    editorBgmVolInput.oninput = () => { editorBgmVolLabel.textContent = parseFloat(editorBgmVolInput.value).toFixed(2); };
+
+    document.getElementById('editorExportBtn').onclick = async () => {
+      if (!editorJobId || !editorItems.length) { alert('타임라인이 비어 있습니다.'); return; }
+      const info = document.getElementById('editorExportInfo');
+      info.textContent = '합치는 중... 시간이 걸릴 수 있습니다.';
+      const timeline = editorItems.map(item => ({
+        type: item.type, name: item.name, duration: item.duration || 3.0,
+      }));
+      const transitionSec = parseFloat(editorTransitionInput.value);
+      const audioVolume = parseFloat(editorAudioVolInput.value);
+      const bgmName = editorBgmSelect.value;
+      const bgmVolume = parseFloat(editorBgmVolInput.value);
+      const res = await fetch(`/api/jobs/${editorJobId}/export/timeline`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({timeline, transition_sec: transitionSec, audio_volume: audioVolume, bgm_name: bgmName, bgm_volume: bgmVolume}),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        info.textContent = `오류: ${err.detail || '합치기 실패'}`;
+        return;
+      }
+      const data = await res.json();
+      info.innerHTML = `완료! <a href="/runs/${editorJobId}/${data.merged}" target="_blank" style="color:#ff8a1d; font-weight:700;">다운로드</a>`;
+    };
+
+    function renderEditorTimeline() {
+      const container = document.getElementById('editorTimeline');
+      const emptyMsg  = document.getElementById('editorEmpty');
+      container.innerHTML = '';
+      document.getElementById('editorItemCount').textContent = `${editorItems.length}개`;
+
+      if (!editorItems.length) {
+        container.appendChild(emptyMsg);
+        return;
+      }
+
+      editorItems.forEach((item, idx) => {
+        const el = document.createElement('div');
+        el.className   = 'tl-item';
+        el.draggable   = true;
+        el.dataset.idx = String(idx);
+
+        const thumbHTML = item.type === 'clip'
+          ? `<video class="tl-thumb" src="/api/jobs/${item.jobId}/clips/${encodeURIComponent(item.name)}/file" preload="metadata" muted></video>`
+          : `<img class="tl-thumb" src="/runs/${item.jobId}/image_cards/${encodeURIComponent(item.name)}" alt="${item.name}">`;
+
+        const durationHTML = item.type === 'image'
+          ? `<div class="tl-duration-row">
+               <input type="number" class="tl-duration-input" min="0.5" max="60" step="0.5" value="${item.duration || 3}"> 초
+             </div>`
+          : '';
+
+        el.innerHTML = `
+          <button class="tl-del-btn" title="제거">&#x2715;</button>
+          <div class="tl-thumb-wrap">${thumbHTML}</div>
+          <div class="tl-info">
+            <div class="tl-type ${item.type}">${item.type === 'clip' ? '영상' : '이미지'}</div>
+            <div class="tl-name" title="${item.name}">${item.name}</div>
+            ${durationHTML}
+          </div>
+        `;
+
+        if (item.type === 'image') {
+          el.querySelector('.tl-duration-input').addEventListener('change', ev => {
+            editorItems[idx].duration = parseFloat(ev.target.value) || 3.0;
+          });
+        }
+
+        el.querySelector('.tl-del-btn').onclick = ev => {
+          ev.stopPropagation();
+          editorItems.splice(idx, 1);
+          renderEditorTimeline();
+        };
+
+        el.addEventListener('dragstart', ev => {
+          ev.dataTransfer.setData('text/plain', String(idx));
+          setTimeout(() => el.classList.add('dragging'), 0);
+        });
+        el.addEventListener('dragend', () => el.classList.remove('dragging'));
+        el.addEventListener('dragover', ev => { ev.preventDefault(); el.classList.add('drag-over'); });
+        el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+        el.addEventListener('drop', ev => {
+          ev.preventDefault();
+          el.classList.remove('drag-over');
+          const from = parseInt(ev.dataTransfer.getData('text/plain'));
+          const to   = parseInt(el.dataset.idx);
+          if (from === to) return;
+          const [moved] = editorItems.splice(from, 1);
+          editorItems.splice(to, 0, moved);
+          renderEditorTimeline();
+        });
+
+        container.appendChild(el);
       });
     }
   </script>
