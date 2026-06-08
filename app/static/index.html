@@ -372,20 +372,30 @@
       border: 1px solid rgba(255,116,0,0.12); border-radius: 12px;
       padding: 12px; min-height: 160px; overflow-x: auto;
       background: rgba(0,0,0,0.25);
+      scrollbar-color: #ff8a1d rgba(255,255,255,0.12);  /* Firefox: thumb / track */
+      scrollbar-width: thin;
     }
+    .editor-timeline-wrap::-webkit-scrollbar { height: 12px; }
+    .editor-timeline-wrap::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.1); border-radius: 6px;
+    }
+    .editor-timeline-wrap::-webkit-scrollbar-thumb {
+      background: #ff8a1d; border-radius: 6px; border: 2px solid rgba(0,0,0,0.25);
+    }
+    .editor-timeline-wrap::-webkit-scrollbar-thumb:hover { background: #ffa040; }
     #editorTimeline {
       display: flex; flex-direction: row; gap: 10px;
       min-height: 136px; align-items: flex-start; flex-wrap: nowrap;
     }
     .tl-item {
       flex: 0 0 auto; width: 130px;
-      background: rgba(26,19,15,0.95);
-      border: 1px solid rgba(255,116,0,0.2);
+      background: rgba(74,60,50,0.95);
+      border: 1px solid rgba(255,116,0,0.3);
       border-radius: 10px; padding: 8px;
       cursor: grab; user-select: none;
-      position: relative; transition: border-color 0.15s;
+      position: relative; transition: border-color 0.15s, background 0.15s;
     }
-    .tl-item:hover { border-color: rgba(255,116,0,0.45); }
+    .tl-item:hover { border-color: rgba(255,116,0,0.55); background: rgba(88,71,59,0.97); }
     .tl-item.drag-over { border-color: #ff8a1d; background: rgba(255,116,0,0.08); }
     .tl-item.dragging { opacity: 0.4; }
     .tl-thumb-wrap {
@@ -421,6 +431,243 @@
       box-shadow: none;
     }
     .tl-del-btn:hover { background: #c62828; border-color: transparent; }
+    .tl-cut-btn {
+      width: 100%; margin-top: 5px; padding: 3px 0;
+      font-size: 11px; line-height: 1; cursor: pointer;
+    }
+
+    /* ── 편집기 오버레이 트랙 (CapCut 스타일) ── */
+    .overlay-section { margin-top: 14px; }
+    .overlay-templates-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 8px; font-size: 13px; color: #8a7c70;
+    }
+    .overlay-tpl-btn {
+      background: rgba(255,116,0,0.12); border: 1px solid rgba(255,116,0,0.35);
+      color: #ff8a1d; font-size: 12px; padding: 4px 10px; border-radius: 6px;
+      cursor: pointer; box-shadow: none; font-weight: 700;
+    }
+    .overlay-tpl-btn:hover { background: rgba(255,116,0,0.25); }
+    .overlay-track-wrap {
+      position: relative;
+      border: 1px solid rgba(255,116,0,0.12);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.25);
+      padding: 8px;
+      overflow-x: auto;
+      min-height: 90px;
+    }
+    .overlay-track-inner {
+      position: relative;
+      height: 70px;
+      min-width: 100%;
+    }
+    .overlay-clip-marker {
+      position: absolute;
+      top: 0; height: 100%;
+      border-right: 1px dashed rgba(255,116,0,0.18);
+      font-size: 9px; color: rgba(255,138,29,0.5);
+      padding: 2px 3px;
+      pointer-events: none;
+    }
+    .overlay-item {
+      position: absolute;
+      height: 30px; top: 18px;
+      background: rgba(255,116,0,0.32);
+      border: 1px solid #ff8a1d;
+      border-radius: 5px;
+      cursor: move;
+      user-select: none;
+      display: flex; align-items: center;
+      padding: 0 22px; overflow: hidden;
+      color: #fff; font-size: 11px; font-weight: 700;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .overlay-item.scorer { background: rgba(255,200,20,0.32); border-color: #ffc814; }
+    .overlay-item .ov-resize {
+      position: absolute; top: 0; height: 100%; width: 7px;
+      cursor: ew-resize; background: rgba(255,255,255,0.18);
+    }
+    .overlay-item .ov-resize.l { left: 0; border-radius: 5px 0 0 5px; }
+    .overlay-item .ov-resize.r { right: 0; border-radius: 0 5px 5px 0; }
+    .overlay-item .ov-del {
+      position: absolute; top: -8px; right: -7px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #c62828; color: #fff; border: none;
+      cursor: pointer; font-size: 10px; line-height: 14px;
+      display: none; padding: 0; box-shadow: none;
+    }
+    .overlay-item:hover .ov-del { display: block; }
+    .overlay-item-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* 오버레이 편집 팝업 */
+    .overlay-edit-preview {
+      position: relative; width: 100%; aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+      border-radius: 8px; overflow: hidden; margin-bottom: 12px;
+      border: 1px solid rgba(255,116,0,0.2);
+    }
+    .ov-preview-box {
+      position: absolute;
+      display: inline-flex;
+      align-items: stretch;
+      cursor: move;
+      user-select: none;
+      white-space: nowrap;
+      z-index: 5;
+      gap: 8px;
+    }
+    .ov-pb-rect {
+      display: inline-flex;
+      align-items: stretch;
+      border: 1px dashed rgba(255,116,0,0.55);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      overflow: hidden;
+      padding: 0 10px;
+      gap: 8px;
+    }
+    .ov-pb-logo { display: flex; align-items: center; }
+    .ov-pb-logo img { height: 28px; width: auto; display: block; }
+    .ov-pb-home, .ov-pb-away {
+      color: #fff; font-weight: 700; font-size: 14px;
+      padding: 6px 0;
+      display: flex; align-items: center;
+    }
+    .ov-pb-score {
+      color: #fff; font-weight: 800; font-size: 16px;
+      padding: 6px 0;
+      display: flex; align-items: center;
+    }
+    .ov-pb-num {
+      color: #fff; font-weight: 900; font-size: 17px;
+      padding: 6px 0; min-width: 22px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ov-pb-text {
+      padding: 6px 0;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .ov-pb-label { color: rgba(255,255,255,0.85); font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+    .ov-pb-name  { color: #fff; font-size: 16px; font-weight: 800; margin-top: 1px; }
+    .ov-edit-form { font-size: 13px; color: #c9b7a7; }
+    .ov-edit-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .ov-input {
+      background:#1b0f07; border:1px solid rgba(255,116,0,0.3);
+      border-radius:4px; color:#f5efe8; font-size:13px; padding:4px 8px;
+    }
+    .ov-input.w-sm { width: 55px; }
+    .ov-input.w-md { width: 100px; }
+    .ov-input.w-lg { width: 140px; }
+
+    /* 이미지 오버레이 프리뷰 박스 */
+    .ov-preview-box.image-mode {
+      padding: 0;
+      border: 1px dashed rgba(255,116,0,0.7);
+    }
+    .ov-preview-box.image-mode img {
+      width: 100%; height: 100%; display: block; object-fit: contain;
+      pointer-events: none;
+    }
+    .ov-resize-handle {
+      position: absolute;
+      width: 10px; height: 10px;
+      background: #ff8a1d;
+      border: 1px solid #fff;
+      border-radius: 50%;
+      z-index: 10;
+    }
+    .ov-resize-handle.nw { top: -5px; left: -5px; cursor: nwse-resize; }
+    .ov-resize-handle.ne { top: -5px; right: -5px; cursor: nesw-resize; }
+    .ov-resize-handle.sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+    .ov-resize-handle.se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+
+    /* BGM 트랙 (오버레이와 동일한 패턴) */
+    .bgm-section { margin-top: 12px; }
+    .bgm-track-wrap {
+      position: relative;
+      border: 1px solid rgba(80,160,255,0.18);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.25);
+      padding: 8px;
+      overflow-x: auto;
+      min-height: 80px;
+    }
+    .bgm-track-inner {
+      position: relative;
+      height: 60px;
+      min-width: 100%;
+    }
+    .bgm-item {
+      position: absolute;
+      height: 30px; top: 14px;
+      background: rgba(80,160,255,0.32);
+      border: 1px solid #5aa3ff;
+      border-radius: 5px;
+      cursor: move;
+      user-select: none;
+      display: flex; align-items: center;
+      padding: 0 22px; overflow: hidden;
+      color: #fff; font-size: 11px; font-weight: 700;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .bgm-item .ov-resize {
+      position: absolute; top: 0; height: 100%; width: 7px;
+      cursor: ew-resize; background: rgba(255,255,255,0.18);
+    }
+    .bgm-item .ov-resize.l { left: 0; border-radius: 5px 0 0 5px; }
+    .bgm-item .ov-resize.r { right: 0; border-radius: 0 5px 5px 0; }
+    .bgm-item .ov-del {
+      position: absolute; top: -8px; right: -7px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #c62828; color: #fff; border: none;
+      cursor: pointer; font-size: 10px; line-height: 14px;
+      display: none; padding: 0; box-shadow: none;
+    }
+    .bgm-item:hover .ov-del { display: block; }
+    .bgm-tpl-btn {
+      background: rgba(80,160,255,0.12); border: 1px solid rgba(80,160,255,0.4);
+      color: #7fb5ff; font-size: 12px; padding: 4px 10px; border-radius: 6px;
+      cursor: pointer; box-shadow: none; font-weight: 700;
+    }
+    .bgm-tpl-btn:hover { background: rgba(80,160,255,0.25); }
+
+    /* ── 편집기 미리보기 (재생하며 오버레이 타이밍 확인) ── */
+    .editor-preview-wrap { margin-top: 14px; }
+    .editor-preview-stage {
+      position: relative; width: 100%; max-width: 560px; margin: 0 auto;
+      aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden;
+      border: 1px solid rgba(255,116,0,0.25);
+    }
+    .editor-preview-stage > video,
+    .editor-preview-stage > img#pvImage {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: contain; background: #000;
+    }
+    #pvOverlayLayer { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+    /* 라이브 미리보기용 오버레이 박스: 편집용 점선 테두리/커서 제거 */
+    .ov-preview-box.pv-box { cursor: default; }
+    .ov-preview-box.pv-box .ov-pb-rect { border: none; }
+    .ov-preview-box.pv-box.image-mode { border: none; }
+    .editor-preview-controls {
+      display: flex; align-items: center; gap: 10px;
+      max-width: 560px; margin: 8px auto 0;
+    }
+    .pv-play-btn {
+      background: rgba(255,116,0,0.18); border: 1px solid rgba(255,116,0,0.5);
+      color: #ffb066; font-size: 14px; width: 34px; height: 30px; border-radius: 6px;
+      cursor: pointer; box-shadow: none; padding: 0;
+    }
+    .pv-play-btn:hover { background: rgba(255,116,0,0.32); }
+    #pvScrub { flex: 1; accent-color: #ff7400; }
+    #pvTimeLabel { font-size: 12px; color: #c9b7a7; min-width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
+    /* 트랙 재생 위치 표시선 */
+    .ov-playhead {
+      position: absolute; top: 0; width: 2px; height: 100%;
+      background: #ff3b30; box-shadow: 0 0 4px rgba(255,59,48,0.8);
+      pointer-events: none; z-index: 20;
+    }
+
+    /* 멀티 잡 선택 박스 */
   </style>
 </head>
 <body>
@@ -432,7 +679,7 @@
     <section class="panel">
       <div class="panel-header">
         <h2>영상 업로드</h2>
-        <div class="trend-card">
+        <div class="trend-card" id="scoreTrendCard">
           <div class="muted" style="margin-bottom: 6px;">XH Score Trend</div>
           <canvas id="scoreTrend" width="240" height="80"></canvas>
         </div>
@@ -442,42 +689,239 @@
       <div class="tab-row">
         <button class="tab-btn active" id="tabAI" onclick="switchTab('ai')">AI 탐지</button>
         <button class="tab-btn" id="tabLog" onclick="switchTab('log')">로그 + AI</button>
+        <button class="tab-btn" id="tabPlayer" onclick="switchTab('player')">🎯 개인 클립</button>
         <button class="tab-btn" id="tabTag" onclick="switchTab('tag')">이벤트 태깅</button>
         <button class="tab-btn" id="tabEditor" onclick="switchTab('editor')">편집기</button>
       </div>
 
       <!-- AI 탐지 폼 -->
       <div id="panelAI">
-        <div class="row">
-          <input type="file" id="videoInput" accept="video/*" />
+        <div class="row" style="margin-bottom:10px; gap:8px;">
+          <button class="tab-btn active" id="aiModeSingle" onclick="setAIMode('single')">전체 영상</button>
+          <button class="tab-btn" id="aiModeSplit" onclick="setAIMode('split')">전반 / 후반 분리</button>
+        </div>
+        <!-- 단일 영상 -->
+        <div id="aiSingleForm" class="row">
+          <input type="file" id="videoInput" accept="video/*,.mts,.m2ts,.ts,.mov,.mkv,.avi,.m4v" />
           <label>후보 수 <input type="number" id="countInput" min="10" max="40" value="40" /></label>
           <button id="uploadBtn">분석 시작</button>
           <button id="resetBtn" class="secondary">초기화</button>
+        </div>
+        <!-- 전반/후반 분리 -->
+        <div id="aiSplitForm" style="display:none;">
+          <div class="row" style="align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:12px;">
+            <div style="display:flex; flex-direction:column; gap:6px; flex:1; min-width:220px;">
+              <label class="muted">전반 영상</label>
+              <input type="file" id="aiFirstHalf" accept="video/*,.mts,.m2ts,.ts,.mov,.mkv,.avi,.m4v" />
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px; flex:1; min-width:220px;">
+              <label class="muted">후반 영상</label>
+              <input type="file" id="aiSecondHalf" accept="video/*,.mts,.m2ts,.ts,.mov,.mkv,.avi,.m4v" />
+            </div>
+          </div>
+          <div class="row">
+            <label>후보 수 <input type="number" id="splitCountInput" min="10" max="40" value="40" /></label>
+            <button id="splitUploadBtn">분석 시작</button>
+            <button id="splitResetBtn" class="secondary">초기화</button>
+          </div>
         </div>
       </div>
 
       <!-- 로그 + AI 폼 -->
       <div id="panelLog" style="display:none;">
-        <div class="row" style="align-items: flex-start; flex-wrap: wrap; gap: 16px;">
-          <div style="display:flex; flex-direction:column; gap:8px; flex:1; min-width:220px;">
-            <label class="muted">경기 영상</label>
-            <input type="file" id="logVideoInput" accept="video/*" />
+        <!-- 하위 모드: 파일 업로드 / 영상 보며 기록 -->
+        <div class="row" style="margin-bottom:12px; gap:8px;">
+          <button class="tab-btn active" id="logInputFile" onclick="setLogInputMode('file')">📁 로그 파일 업로드</button>
+          <button class="tab-btn" id="logInputLive" onclick="setLogInputMode('live')">🎬 영상 보며 기록</button>
+        </div>
+
+        <!-- 파일 업로드 모드 -->
+        <div id="logFileMode">
+        <div class="row" style="margin-bottom:10px; gap:8px;">
+          <button class="tab-btn active" id="logModeSingle" onclick="setLogMode('single')">전체 영상</button>
+          <button class="tab-btn" id="logModeSplit" onclick="setLogMode('split')">전반 / 후반 분리</button>
+        </div>
+        <!-- 단일 영상 -->
+        <div id="logSingleForm">
+          <div class="row" style="align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+            <div style="display:flex; flex-direction:column; gap:8px; flex:1; min-width:220px;">
+              <label class="muted">경기 영상</label>
+              <input type="file" id="logVideoInput" accept="video/*,.mts,.m2ts,.ts,.mov,.mkv,.avi,.m4v" />
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; flex:2; min-width:300px;">
+              <label class="muted">Match ID</label>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" id="logMatchId" placeholder="예: 384" />
+              <span class="muted" style="font-size:12px;">입력 시 자동으로 경기 로그를 불러옵니다 (아래 파일 선택 불필요).</span>
+              <label class="muted" style="margin-top:6px;">타임라인 로그 (.json 파일, Match ID 없을 때)</label>
+              <input type="file" id="logDataInput" accept=".json,application/json" />
+              <span class="muted" id="logFileInfo" style="font-size:12px;"></span>
+            </div>
           </div>
-          <div style="display:flex; flex-direction:column; gap:8px; flex:2; min-width:300px;">
-            <label class="muted">타임라인 로그 (.json 파일)</label>
-            <input type="file" id="logDataInput" accept=".json,application/json" />
-            <span class="muted" id="logFileInfo" style="font-size:12px;"></span>
+          <div class="row" style="margin-top:12px; flex-wrap:wrap; gap:16px;">
+            <label class="muted" style="display:flex; align-items:center; gap:8px;">
+              후반 시작 (영상 내 시각)
+              <input type="number" id="halfStartMin" min="0" max="120" value="25" style="width:70px;" /> 분
+              <input type="number" id="halfStartSec" min="0" max="59" value="0" style="width:60px;" /> 초
+            </label>
+            <label class="muted">후보 수 <input type="number" id="logCountInput" min="10" max="40" value="40" /></label>
+            <button id="logUploadBtn">로그 분석 시작</button>
+            <button id="logResetBtn" class="secondary">초기화</button>
           </div>
         </div>
-        <div class="row" style="margin-top:12px; flex-wrap:wrap; gap:16px;">
-          <label class="muted" style="display:flex; align-items:center; gap:8px;">
-            후반 시작 (영상 내 시각)
-            <input type="number" id="halfStartMin" min="0" max="120" value="25" style="width:70px;" /> 분
-            <input type="number" id="halfStartSec" min="0" max="59" value="0" style="width:60px;" /> 초
-          </label>
-          <label class="muted">후보 수 <input type="number" id="logCountInput" min="10" max="40" value="40" /></label>
-          <button id="logUploadBtn">로그 분석 시작</button>
-          <button id="logResetBtn" class="secondary">초기화</button>
+        <!-- 전반/후반 분리 -->
+        <div id="logSplitForm" style="display:none;">
+          <div class="row" style="align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:12px;">
+            <div style="display:flex; flex-direction:column; gap:8px; flex:1; min-width:220px;">
+              <label class="muted">전반 영상</label>
+              <input type="file" id="logFirstHalf" accept="video/*,.mts,.m2ts,.ts,.mov,.mkv,.avi,.m4v" />
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; flex:1; min-width:220px;">
+              <label class="muted">후반 영상</label>
+              <input type="file" id="logSecondHalf" accept="video/*,.mts,.m2ts,.ts,.mov,.mkv,.avi,.m4v" />
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; flex:2; min-width:300px;">
+              <label class="muted">Match ID</label>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" id="logSplitMatchId" placeholder="예: 384" />
+              <span class="muted" style="font-size:12px;">입력 시 자동으로 경기 로그를 불러옵니다 (아래 파일 선택 불필요).</span>
+              <label class="muted" style="margin-top:6px;">타임라인 로그 (.json 파일, Match ID 없을 때)</label>
+              <input type="file" id="logSplitDataInput" accept=".json,application/json" />
+              <span class="muted" id="logSplitFileInfo" style="font-size:12px;"></span>
+            </div>
+          </div>
+          <div class="muted" style="font-size:12px; margin-bottom:10px;">후반 시작 시간은 전반 영상 길이에서 자동 계산됩니다.</div>
+          <div class="row" style="flex-wrap:wrap; gap:16px;">
+            <label class="muted">후보 수 <input type="number" id="logSplitCountInput" min="10" max="40" value="40" /></label>
+            <button id="logSplitUploadBtn">로그 분석 시작</button>
+            <button id="logSplitResetBtn" class="secondary">초기화</button>
+          </div>
+        </div>
+        </div><!-- /logFileMode -->
+
+        <!-- 영상 보며 기록 모드 -->
+        <div id="logLiveMode" style="display:none;">
+          <div class="muted" style="font-size:12px; margin-bottom:10px;">
+            영상을 선택해 재생하면서 골/하이라이트 시점을 직접 찍습니다. 업로드 없이 바로 재생되고,
+            <b>로그 입력 완료</b>를 누르면 기록한 시점으로 자동 로그를 만들어 분석을 시작합니다.<br>
+            단축키: <code>Space</code> 재생/정지 · <code>← →</code> 1초 · <code>Shift+← →</code> 0.1초 · <code>G</code> 골 · <code>H</code> 하이라이트
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+            <label class="muted">경기 영상</label>
+            <input type="file" id="liveVideoInput" accept="video/*,.mts,.m2ts,.ts,.mov,.mkv,.avi,.m4v" />
+          </div>
+
+          <video id="liveVideo" controls playsinline preload="auto"
+                 style="width:100%; border-radius:10px; background:#000; display:none; margin-bottom:10px;"></video>
+
+          <div id="liveControls" style="display:none;">
+            <div class="row" style="align-items:center; gap:14px; margin-bottom:12px; flex-wrap:wrap;">
+              <div id="liveCurrentTime" style="font-size:30px; font-weight:700; color:#ff8a1d; font-variant-numeric:tabular-nums; letter-spacing:1px; min-width:120px;">0:00.0</div>
+              <button id="liveGoalBtn" style="background:#e63946;">⚽ 골 기록 (G)</button>
+              <button id="liveHlBtn" style="background:#ff8a1d;">⭐ 하이라이트 기록 (H)</button>
+              <button id="liveHalfBtn" class="secondary">⏱ 여기부터 후반</button>
+            </div>
+            <div id="liveHalfInfo" class="muted" style="font-size:12px; margin-bottom:10px;"></div>
+
+            <div id="liveMarkList" style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px; max-height:260px; overflow-y:auto;"></div>
+
+            <div class="row" style="flex-wrap:wrap; gap:16px; align-items:center;">
+              <label class="muted">후보 수 <input type="number" id="liveCountInput" min="10" max="40" value="40" /></label>
+              <button id="liveSubmitBtn">✅ 로그 입력 완료 &amp; 분석 시작</button>
+              <button id="liveResetBtn" class="secondary">초기화</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 개인 클립 패널 (선수 클릭 추적 → 공 관여 구간 추출) -->
+      <div id="panelPlayer" style="display:none;">
+        <div class="muted" style="font-size:12px; margin-bottom:10px;">
+          🎯 영상을 올리면 선수·공을 탐지합니다. 훑어보다가 <b>타깃 선수가 공을 잡는 순간 그 선수를 클릭</b>하세요.
+          클릭은 <b>"이 터치 = 내 선수"</b>라는 표시일 뿐 추적을 따라가지 않으므로, 트랙 id 가 직후 바뀌어도 상관없습니다
+          (신원은 보는 사람이 확정). 노란 박스 = 지금 공 보유(클릭 대상), 클릭하면 초록(선택됨). 공이 미탐지인
+          순간에 클릭하면 그 시각이 수동으로 선택됩니다. 선택한 터치들만 클립으로 추출 → 클립을 보며 삭제하면 됩니다.
+        </div>
+        <div class="row" style="align-items:flex-start; flex-wrap:wrap; gap:16px;">
+          <div style="display:flex; flex-direction:column; gap:8px; flex:1; min-width:220px;">
+            <label class="muted">경기 영상</label>
+            <input type="file" id="pcVideoInput" accept="video/*,.mts,.m2ts,.ts,.mov,.mkv,.avi,.m4v" />
+          </div>
+          <div style="display:flex; align-items:flex-end; gap:8px;">
+            <button id="pcDetectBtn">탐지 시작</button>
+            <button id="pcResetBtn" class="secondary">초기화</button>
+          </div>
+        </div>
+
+        <!-- 탐지 후: 영상 + 박스 오버레이 -->
+        <div id="pcStageWrap" style="display:none; margin-top:14px;">
+          <div id="pcLostBanner" style="display:none; background:#7a2230; color:#fff; padding:8px 12px;
+               border-radius:8px; font-size:13px; margin-bottom:8px;">
+            ⚠️ 추적이 끊겼습니다 — 현재 화면에서 같은 선수를 다시 클릭하세요.
+          </div>
+          <div id="pcStage" style="position:relative; width:100%; background:#000; border-radius:10px; overflow:hidden;">
+            <video id="pcVideo" playsinline preload="auto" style="width:100%; display:block;"></video>
+            <canvas id="pcCanvas" style="position:absolute; left:0; top:0; width:100%; height:100%; cursor:crosshair;"></canvas>
+          </div>
+          <div class="row" style="margin-top:10px; flex-wrap:wrap; gap:12px; align-items:center;">
+            <button id="pcPlayBtn" class="secondary">▶/⏸</button>
+            <label class="muted" style="display:flex; align-items:center; gap:4px; font-size:12px;">속도
+              <select id="pcSpeed" style="font-size:12px;">
+                <option value="1">1x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2" selected>2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+              </select>
+            </label>
+            <button id="pcProxyBtn" class="secondary" style="display:none; font-size:12px;">⚡ 고배속 재생 최적화</button>
+            <span class="muted" id="pcProxyInfo" style="font-size:11px;"></span>
+            <span class="muted" id="pcSeedInfo" style="font-size:12px;">선수를 클릭해 지정하세요.</span>
+            <button id="pcClearSeedBtn" class="secondary" style="font-size:12px;">선수 초기화</button>
+            <span style="flex:1;"></span>
+            <label class="muted" style="display:flex; align-items:center; gap:6px;">앞
+              <input type="number" id="pcPadBefore" min="0" max="30" value="3" step="0.5" style="width:60px;"/>초</label>
+            <label class="muted" style="display:flex; align-items:center; gap:6px;">뒤
+              <input type="number" id="pcPadAfter" min="0" max="30" value="3" step="0.5" style="width:60px;"/>초</label>
+            <span id="pcPreview" style="font-size:12px; color:#39d353; white-space:nowrap;"></span>
+            <button id="pcExtractBtn">공 관여 클립 추출</button>
+          </div>
+          <div class="muted" id="pcHint" style="font-size:11px; margin-top:6px;">
+            박스: <span style="color:#ffd166;">●</span> 현재 공 보유(클릭 대상) · <span style="color:#39d353;">●</span> 선택됨 · <span style="color:#888;">●</span> 그 외.
+            stride 샘플이라 재생 중 박스가 약간 끊겨 보일 수 있습니다(클릭은 멈춘 상태 권장).<br>
+            단축키: <code>Space</code> 재생/정지 · <code>← →</code> 1초 이동 · <code>Shift+← →</code> 0.1초 미세 이동.
+          </div>
+
+          <!-- 내 선수 터치 확인 (시드 구간의 공 보유 이벤트) -->
+          <div id="pcEventWrap" style="display:none; margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,116,0,0.12);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size:13px; font-weight:600;">🎬 선택한 터치</span>
+              <span class="muted" id="pcEventStat" style="font-size:11px;"></span>
+            </div>
+            <div class="muted" style="font-size:11px; margin-bottom:6px;">
+              클릭으로 선택한 터치들입니다. <code>▶</code>로 위치를 확인하고, 잘못 선택한 건 <code>✕</code>로 빼세요.
+              이것들만 클립으로 추출됩니다.
+            </div>
+            <div id="pcEventStrip" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px;"></div>
+          </div>
+
+          <!-- 신원 검증 타임라인 -->
+          <div id="pcVerifyWrap" style="display:none; margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,116,0,0.12);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size:13px; font-weight:600;">🔍 신원 검증</span>
+              <span class="muted" id="pcVerifyStat" style="font-size:11px;"></span>
+            </div>
+            <div class="muted" style="font-size:11px; margin-bottom:6px;">
+              <span style="color:#39d353;">▮</span> 지정 선수 추적됨 ·
+              <span style="color:#555;">▮</span> 미검출(가림·재연결) ·
+              <span style="color:#ff5a5a;">▮</span> 위치 급변(다른 선수로 바뀐 의심) — 클릭해 확인하고, <b>잘못 따라간 구간은 제외</b>하세요.
+            </div>
+            <canvas id="pcTimeline" height="34" style="width:100%; background:#161616; border-radius:6px; cursor:pointer; display:block;"></canvas>
+            <div class="row" style="margin-top:8px; gap:8px; flex-wrap:wrap; align-items:center;">
+              <button id="pcExStartBtn" class="secondary" style="font-size:12px;">⛔ 제외 시작(현재 위치)</button>
+              <button id="pcExEndBtn" class="secondary" style="font-size:12px;" disabled>제외 끝(현재 위치)</button>
+              <span class="muted" id="pcExInfo" style="font-size:11px;"></span>
+            </div>
+            <div id="pcExList" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+          </div>
         </div>
       </div>
 
@@ -515,15 +959,31 @@
 
       <!-- 편집기 패널 -->
       <div id="panelEditor" style="display:none;">
-        <div class="row" style="margin-bottom:12px; gap:10px; flex-wrap:wrap;">
+        <div class="row" style="margin-bottom:12px; gap:8px; flex-wrap:wrap; align-items:center;">
           <label class="muted" style="display:flex; align-items:center; gap:6px;">
             영상 선택
-            <select id="editorJobSelect" class="event-type-select" style="min-width:260px;">
-              <option value="">(분석 완료된 영상 선택)</option>
+            <select id="editorJobSelect" class="event-type-select" style="min-width:280px;">
+              <option value="">(선택)</option>
             </select>
           </label>
           <button id="editorLoadBtn" class="secondary">클립 불러오기</button>
+          <input type="file" id="externalClipInput" accept="video/*,.mp4,.mov,.avi,.mkv,.webm,.m4v" multiple style="display:none;">
+          <button id="externalClipBtn" class="secondary" title="외부 영상 파일을 타임라인에 추가">외부 영상 추가</button>
+          <button id="editorClearBtn" class="secondary" title="타임라인 모두 비우기">비우기</button>
           <span class="badge" id="editorItemCount">0개</span>
+          <span class="muted" id="editorJobsSummary" style="font-size:12px;"></span>
+        </div>
+        <!-- 편집 프로젝트 저장/불러오기 -->
+        <div class="row" style="margin-bottom:12px; gap:8px; flex-wrap:wrap; align-items:center;">
+          <span class="muted" style="font-size:12px; color:#7fb5ff;">프로젝트:</span>
+          <input type="text" id="projNameInput" placeholder="프로젝트 이름" class="event-type-select" style="width:180px;">
+          <button id="projSaveBtn" class="secondary" title="현재 타임라인·오버레이·BGM·설정을 저장">💾 저장</button>
+          <select id="projSelect" class="event-type-select" style="min-width:220px;">
+            <option value="">(저장된 프로젝트 선택)</option>
+          </select>
+          <button id="projLoadBtn" class="secondary">📂 불러오기</button>
+          <button id="projDeleteBtn" class="secondary" title="선택한 프로젝트 삭제" style="background:rgba(198,40,40,0.15); border-color:rgba(198,40,40,0.4); color:#ff6e6e;">삭제</button>
+          <span class="muted" id="projInfo" style="font-size:12px;"></span>
         </div>
         <!-- 가로 스크롤 타임라인 -->
         <div class="editor-timeline-wrap">
@@ -531,6 +991,49 @@
             <span id="editorEmpty" class="muted" style="font-size:13px; align-self:center; padding:0 12px;">
               클립을 불러오거나 이미지 카드를 추가하세요. 드래그로 순서를 변경할 수 있습니다.
             </span>
+          </div>
+        </div>
+        <!-- 미리보기 (클립을 순서대로 재생하며 오버레이 타이밍 확인) -->
+        <div class="editor-preview-wrap" id="editorPreviewWrap" style="display:none;">
+          <div class="editor-preview-stage" id="editorPreviewStage">
+            <video id="pvVideo" playsinline preload="auto"></video>
+            <img id="pvImage" alt="card" style="display:none;">
+            <div id="pvOverlayLayer"></div>
+          </div>
+          <div class="editor-preview-controls">
+            <button id="pvPlayBtn" class="pv-play-btn" title="재생/정지">▶</button>
+            <input type="range" id="pvScrub" min="0" max="1000" value="0">
+            <span id="pvTimeLabel">0.0 / 0.0s</span>
+          </div>
+        </div>
+        <!-- 오버레이 트랙 (CapCut 스타일) -->
+        <div class="overlay-section" id="overlaySection" style="display:none;">
+          <div class="overlay-templates-row">
+            <span>오버레이:</span>
+            <button class="overlay-tpl-btn" data-tpl="scoreboard" title="점수판 추가">＋ 점수판</button>
+            <button class="overlay-tpl-btn" data-tpl="scorer" title="득점자 추가">＋ 득점자</button>
+            <button class="overlay-tpl-btn" data-tpl="scoreboard-image" title="점수판 이미지 추가">＋ 점수판(이미지)</button>
+            <button class="overlay-tpl-btn" data-tpl="scorer-image" title="득점자 이미지 추가">＋ 득점자(이미지)</button>
+            <input type="file" id="overlayImageInput" accept="image/*" style="display:none;">
+            <span style="margin-left:auto; font-size:11px; color:#8a7c70;">박스 드래그=이동, 양끝 드래그=구간 조정, 클릭=내용 편집</span>
+          </div>
+          <div class="overlay-track-wrap" id="overlayTrackWrap">
+            <div class="overlay-track-inner" id="overlayTrackInner"></div>
+          </div>
+        </div>
+        <!-- BGM 트랙 (드래그로 구간 배치) -->
+        <div class="bgm-section" id="bgmSection" style="display:none;">
+          <div class="overlay-templates-row">
+            <span style="color:#7fb5ff;">BGM:</span>
+            <button class="bgm-tpl-btn" id="bgmAddBtn" title="BGM 구간 추가">＋ BGM 추가</button>
+            <label style="cursor:pointer;background:#333;color:#f5efe8;border:1px solid #555;border-radius:4px;padding:2px 8px;font-size:12px;" title="MP3 업로드">
+              + 파일 업로드
+              <input type="file" id="bgmUploadInputEditor" accept=".mp3,.wav,.ogg,.m4a,.aac,.flac" style="display:none;">
+            </label>
+            <span style="margin-left:auto; font-size:11px; color:#8a7c70;">구간 드래그=이동, 양끝 드래그=시간 조정, 클릭=볼륨/페이드 편집</span>
+          </div>
+          <div class="bgm-track-wrap" id="bgmTrackWrap">
+            <div class="bgm-track-inner" id="bgmTrackInner"></div>
           </div>
         </div>
         <!-- 하단 컨트롤 -->
@@ -550,17 +1053,6 @@
               <input type="range" id="editorAudioVolume" min="0" max="2" step="0.05" value="1" style="width:70px;accent-color:#ff7400;">
               <span id="editorAudioVolumeLabel">1.0</span>
             </label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#ccc;">
-              BGM
-              <select id="editorBgmSelect" style="background:#1e1e1e;color:#f5efe8;border:1px solid #444;border-radius:4px;padding:2px 6px;font-size:13px;">
-                <option value="">없음</option>
-              </select>
-            </label>
-            <label id="editorBgmVolWrap" style="display:none;align-items:center;gap:6px;font-size:13px;color:#ccc;">
-              BGM 볼륨
-              <input type="range" id="editorBgmVolume" min="0" max="1" step="0.05" value="0.3" style="width:70px;accent-color:#ff7400;">
-              <span id="editorBgmVolumeLabel">0.3</span>
-            </label>
           </span>
           <button id="editorExportBtn">합치기 &amp; 다운로드</button>
         </div>
@@ -577,6 +1069,8 @@
         </label>
         <button id="loadJobBtn" class="secondary">불러오기</button>
         <button id="refreshJobsBtn" class="secondary">목록 새로고침</button>
+        <input type="file" id="candidateExternalInput" accept="video/*,.mp4,.mov,.avi,.mkv,.webm,.m4v" multiple style="display:none;">
+        <button id="candidateExternalBtn" class="secondary" title="외부 영상 파일을 현재 불러온 Run의 하이라이트 후보에 추가 (컷 편집 가능)">＋ 외부 영상 추가</button>
       </div>
       <div class="status" id="status">대기 중</div>
       <div class="muted" id="jobInfo"></div>
@@ -613,6 +1107,10 @@
               <select id="mergeBgmSelect" style="background:#1e1e1e;color:#f5efe8;border:1px solid #444;border-radius:4px;padding:2px 6px;font-size:13px;">
                 <option value="">없음</option>
               </select>
+              <label style="cursor:pointer;background:#333;color:#f5efe8;border:1px solid #555;border-radius:4px;padding:2px 8px;font-size:12px;" title="MP3 업로드">
+                + 업로드
+                <input type="file" id="bgmUploadInput" accept=".mp3,.wav,.ogg,.m4a,.aac,.flac" style="display:none;">
+              </label>
             </label>
             <label id="mergeBgmVolWrap" style="display:none;align-items:center;gap:6px;font-size:13px;color:#ccc;">
               BGM 볼륨
@@ -660,12 +1158,14 @@
         </div>
         <div class="row" style="justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
           <button id="loopToggle" class="secondary">구간 루프: OFF</button>
-          <label class="muted" style="display:flex; align-items:center; gap:6px;">
-            타입
-            <select id="eventTypeSelect" class="event-type-select"></select>
-          </label>
-          <button id="markEventBtn" class="event-btn">⚑ 이벤트 프레임 지정 (현재 시점)</button>
-          <button id="clearEventBtn" class="secondary">이벤트 지정 해제</button>
+          <span id="trimEventControls" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <label class="muted" style="display:flex; align-items:center; gap:6px;">
+              타입
+              <select id="eventTypeSelect" class="event-type-select"></select>
+            </label>
+            <button id="markEventBtn" class="event-btn">⚑ 이벤트 프레임 지정 (현재 시점)</button>
+            <button id="clearEventBtn" class="secondary">이벤트 지정 해제</button>
+          </span>
           <button id="applyTrim">선택 구간 저장</button>
         </div>
         <div class="muted" id="currentEventInfo"></div>
@@ -682,17 +1182,39 @@
     </div>
   </div>
 
+  <!-- 오버레이 편집 모달 -->
+  <div class="modal" id="overlayEditModal">
+    <div class="modal-content" style="max-width:640px;">
+      <div class="modal-header">
+        <h2 id="overlayEditTitle">오버레이 편집</h2>
+        <button class="secondary" id="closeOverlayEdit">닫기</button>
+      </div>
+      <div class="overlay-edit-preview" id="overlayEditPreview">
+        <div id="ovPreviewBox" class="ov-preview-box"></div>
+      </div>
+      <div class="muted" style="font-size:11px; margin-bottom:10px;">미리보기 박스를 드래그해 위치 조정</div>
+      <div class="ov-edit-form" id="ovEditForm"></div>
+      <div class="row" style="justify-content:flex-end; gap:8px; margin-top:14px;">
+        <button class="secondary" id="ovDeleteBtn" style="background:rgba(198,40,40,0.15); border-color:rgba(198,40,40,0.4); color:#ff6e6e;">삭제</button>
+        <button id="ovApplyBtn">저장</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ── 탭 전환 ──────────────────────────────────
     function switchTab(mode) {
       document.getElementById('panelAI').style.display     = mode === 'ai'     ? '' : 'none';
       document.getElementById('panelLog').style.display    = mode === 'log'    ? '' : 'none';
+      document.getElementById('panelPlayer').style.display = mode === 'player' ? '' : 'none';
       document.getElementById('panelTag').style.display    = mode === 'tag'    ? '' : 'none';
       document.getElementById('panelEditor').style.display = mode === 'editor' ? '' : 'none';
       document.getElementById('tabAI').classList.toggle('active', mode === 'ai');
       document.getElementById('tabLog').classList.toggle('active', mode === 'log');
+      document.getElementById('tabPlayer').classList.toggle('active', mode === 'player');
       document.getElementById('tabTag').classList.toggle('active', mode === 'tag');
       document.getElementById('tabEditor').classList.toggle('active', mode === 'editor');
+      document.getElementById('scoreTrendCard').style.display = (mode === 'editor' || mode === 'player') ? 'none' : '';
       if (mode === 'tag') loadTagJobs();
       if (mode === 'editor') initEditor();
     }
@@ -707,6 +1229,7 @@
     const modeBadgeText = document.getElementById('modeBadgeText');
     fetch('/api/mode').then(r => r.json()).then(data => {
       const on = !!data.use_xgb;
+      window.__useXgb = on;   // 트랜지션은 실사용 모드(XGB=1)에서만 적용 → 타임라인 압축 계산에 사용
       modeBadge.classList.toggle('on', on);
       modeBadge.classList.toggle('off', !on);
       modeBadgeText.textContent = on ? 'XGB ON · 실사용 모드' : 'XGB OFF · 학습 데이터 수집 모드';
@@ -724,18 +1247,41 @@
       if (on) {
         mergeEffectsWrap.style.display = 'flex';
         editorEffectsWrap.style.display = 'flex';
-        // BGM 목록 로드
-        fetch('/api/bgm').then(r => r.json()).then(d => {
-          const tracks = d.tracks || [];
-          [document.getElementById('mergeBgmSelect'), document.getElementById('editorBgmSelect')].forEach(sel => {
-            tracks.forEach(name => {
-              const opt = document.createElement('option');
-              opt.value = name;
-              opt.textContent = name.replace(/\.[^.]+$/, '');
-              sel.appendChild(opt);
-            });
+        // BGM 목록 로드 (합치기 패널의 단일 BGM 선택용 + 편집기 BGM 트랙 후보 목록)
+        window.__bgmTracks = [];
+        function loadBgmList(selectValue) {
+          return fetch('/api/bgm').then(r => r.json()).then(d => {
+            const tracks = d.tracks || [];
+            window.__bgmTracks = tracks;
+            const mergeSel = document.getElementById('mergeBgmSelect');
+            if (mergeSel) {
+              const prev = selectValue || mergeSel.value;
+              mergeSel.querySelectorAll('option:not([value=""])').forEach(o => o.remove());
+              tracks.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name.replace(/\.[^.]+$/, '');
+                mergeSel.appendChild(opt);
+              });
+              if (prev) mergeSel.value = prev;
+            }
+            return tracks;
           });
-        });
+        }
+        loadBgmList();
+
+        function handleBgmUpload(inputEl) {
+          const file = inputEl.files[0];
+          if (!file) return;
+          const fd = new FormData();
+          fd.append('file', file);
+          fetch('/api/bgm/upload', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(d => { loadBgmList(d.name); inputEl.value = ''; })
+            .catch(() => alert('BGM 업로드 실패'));
+        }
+        document.getElementById('bgmUploadInput').addEventListener('change', function() { handleBgmUpload(this); });
+        document.getElementById('bgmUploadInputEditor').addEventListener('change', function() { handleBgmUpload(this); });
       }
     }).catch(() => {
       modeBadgeText.textContent = '모드 확인 실패';
@@ -1059,7 +1605,7 @@
       lastMetadata = metadata;
       clipGrid.innerHTML = '';
       currentJobId = metadata.job_id;
-      const { clips = [], selected = {}, trimmed = {}, clip_features = {}, clip_feature_stats = {}, event_marks = {}, clip_categories = {}, clip_scores = {}, clip_timestamps = {}, job_id } = metadata;
+      const { clips = [], selected = {}, trimmed = {}, clip_features = {}, clip_feature_stats = {}, event_marks = {}, clip_categories = {}, clip_scores = {}, clip_timestamps = {}, job_id, second_half_start_sec } = metadata;
       const filterVal = categoryFilter ? categoryFilter.value : 'all';
 
       // 스코어 기반 순위 계산
@@ -1085,6 +1631,14 @@
           evBadge = `<div class="event-badge">⚑ 이벤트 ${evMark.event_time_in_clip_sec.toFixed(1)}s (frame ${evMark.event_frame_original})<span class="type-chip">${typeLabel}</span></div>`;
         } else {
           evBadge = `<div class="event-badge none">⚑ 이벤트 미지정</div>`;
+        }
+
+        // 전반/후반 뱃지 (split job일 때만)
+        let halfBadge = '';
+        if (second_half_start_sec != null) {
+          const ts = clip_timestamps[clip];
+          const isSecond = ts && ts.start >= second_half_start_sec;
+          halfBadge = `<div style="position:absolute; top:8px; left:8px; background:${isSecond ? 'rgba(33,150,243,0.85)' : 'rgba(255,116,0,0.85)'}; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">${isSecond ? '후반' : '전반'}</div>`;
         }
 
         // 카테고리 배지 (Good / Bad / missing)
@@ -1117,6 +1671,7 @@
         const topFeatureLabel = FEATURE_LABELS[topFeatureKey] || topFeatureKey || 'N/A';
         card.innerHTML = `
           ${catBadge}
+          ${halfBadge}
           <div class="clip-index" title="스코어 순위">${rankLabel}${scoreLabel}</div>
           <div class="clip-feature" title="${topFeatureKey}">${topFeatureLabel}</div>
           <video controls src="${videoSrc}"></video>
@@ -1164,6 +1719,9 @@
         };
         card.querySelector('.trim-btn').onclick = () => {
           currentTrimClip = { jobId: job_id, clip };
+          // 편집기 모드에서 숨겼을 수 있는 분석 전용 UI 복원
+          document.getElementById('trimEventControls').style.display = 'flex';
+          document.getElementById('currentEventInfo').style.display = '';
           const baseClip = trimmed[clip] ? trimmed[clip].from : clip;
           const stats = clip_feature_stats[baseClip] || clip_feature_stats[clip];
           const shapArea = document.getElementById('shapChartArea');
@@ -1226,21 +1784,56 @@
     closeTrim.onclick = () => { trimModal.classList.remove('active'); trimVideo.pause(); };
     loopToggle.onclick = () => { loopEnabled = !loopEnabled; loopToggle.textContent = `구간 루프: ${loopEnabled?'ON':'OFF'}`; };
     
+    // 편집기 타임라인 아이템(클립/외부영상)을 컷 편집 모드로 열기.
+    // 분석 전용 UI(SHAP 차트·이벤트 마킹)는 숨기고 트림만 노출.
+    function openTrimForEditor(idx) {
+      const item = editorItems[idx];
+      if (!item || item.type !== 'clip') return;
+      currentTrimClip = { jobId: item.jobId, clip: item.name, editorIdx: idx };
+      document.getElementById('shapChartArea').style.display = 'none';
+      document.getElementById('trimEventControls').style.display = 'none';
+      document.getElementById('currentEventInfo').style.display = 'none';
+      trimModalInfo.textContent = '';
+      trimVideo.src = `/api/jobs/${item.jobId}/clips/${encodeURIComponent(item.name)}/file`;
+      trimModal.classList.add('active');
+      trimVideo.onloadedmetadata = () => {
+        trimStart = 0; trimEnd = trimVideo.duration;
+        updateTrimOverlay(); generateThumbnails();
+      };
+    }
+
     applyTrim.onclick = async () => {
       trimModalInfo.textContent = '적용 중...';
       const res = await fetch(`/api/jobs/${currentTrimClip.jobId}/clips/${currentTrimClip.clip}/trim?start=${trimStart}&end=${trimEnd}`, {method:'POST'});
-      if (res.ok) {
-        const data = await res.json();
-        const refreshed = await fetchJob(currentTrimClip.jobId);
-        renderClips(refreshed);
-        // 저장된 클립의 원본 영상 기준 타임스탬프 표시
-        const ts = (refreshed.clip_timestamps || {})[data.clip];
-        const tsMsg = ts
-          ? ` · 원본 영상 기준 ${fmtTime(ts.start)} ~ ${fmtTime(ts.end)}`
-          : (data.video_start != null ? ` · 원본 영상 기준 ${fmtTime(data.video_start)} ~ ${fmtTime(data.video_end)}` : '');
-        trimModalInfo.innerHTML = `<span style="color:#7ee3a8; font-weight:700;">저장 완료!</span><span style="color:#8a7c70;">${tsMsg}</span>`;
-        setTimeout(() => trimModal.classList.remove('active'), 2500);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        trimModalInfo.textContent = `오류: ${err.detail || '저장 실패'}`;
+        return;
       }
+      const data = await res.json();
+
+      // 편집기에서 연 경우: 해당 타임라인 아이템을 트림된 클립으로 교체
+      if (currentTrimClip.editorIdx != null && editorItems[currentTrimClip.editorIdx]) {
+        const it = editorItems[currentTrimClip.editorIdx];
+        it.name = data.clip;
+        it.ts = (data.video_start != null) ? {start: data.video_start, end: data.video_end} : null;
+        delete it._dur;
+        renderEditorTimeline();
+        trimModalInfo.innerHTML = `<span style="color:#7ee3a8; font-weight:700;">컷 적용 완료!</span> <span style="color:#8a7c70;">타임라인에 반영됨</span>`;
+        setTimeout(() => trimModal.classList.remove('active'), 1800);
+        return;
+      }
+
+      // 분석 그리드에서 연 경우: 기존 동작
+      const refreshed = await fetchJob(currentTrimClip.jobId);
+      renderClips(refreshed);
+      // 저장된 클립의 원본 영상 기준 타임스탬프 표시
+      const ts = (refreshed.clip_timestamps || {})[data.clip];
+      const tsMsg = ts
+        ? ` · 원본 영상 기준 ${fmtTime(ts.start)} ~ ${fmtTime(ts.end)}`
+        : (data.video_start != null ? ` · 원본 영상 기준 ${fmtTime(data.video_start)} ~ ${fmtTime(data.video_end)}` : '');
+      trimModalInfo.innerHTML = `<span style="color:#7ee3a8; font-weight:700;">저장 완료!</span><span style="color:#8a7c70;">${tsMsg}</span>`;
+      setTimeout(() => trimModal.classList.remove('active'), 2500);
     };
 
     // --- 이벤트 프레임 지정 로직 ---
@@ -1329,6 +1922,9 @@
       const jobId = existingJobSelect.value;
       if (!jobId) { alert('불러올 Run 을 선택하세요.'); return; }
       currentJobId = jobId;
+      // 편집기 드롭다운도 같은 영상으로 동기화
+      const edSel = document.getElementById('editorJobSelect');
+      if (edSel) edSel.value = jobId;
       statusEl.textContent = `기존 Run 불러오는 중: ${jobId.slice(0,8)}...`;
       const data = await fetchJob(jobId);
       statusEl.textContent = `${data.status}: ${data.message || ''}`;
@@ -1339,6 +1935,42 @@
     };
 
     refreshJobsBtn.onclick = loadExistingJobs;
+
+    // 하이라이트 후보 그리드에 외부 영상 추가 (현재 불러온 Run에 등록 → 컷 편집 가능)
+    const candidateExternalBtn = document.getElementById('candidateExternalBtn');
+    const candidateExternalInput = document.getElementById('candidateExternalInput');
+    candidateExternalBtn.onclick = () => {
+      if (!currentJobId) {
+        alert('먼저 Run 을 불러오거나 영상을 분석해 주세요. (외부 영상은 현재 Run의 후보 목록에 추가됩니다)');
+        return;
+      }
+      candidateExternalInput.click();
+    };
+    candidateExternalInput.onchange = async (e) => {
+      const files = Array.from(e.target.files || []);
+      e.target.value = '';
+      if (!files.length || !currentJobId) return;
+      let added = 0;
+      for (const f of files) {
+        statusEl.textContent = `외부 영상 추가 중... (${added + 1}/${files.length}) ${f.name}`;
+        const fd = new FormData();
+        fd.append('file', f);
+        try {
+          const res = await fetch(`/api/jobs/${currentJobId}/external-clips?register=true`, {method:'POST', body:fd});
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({detail:'업로드 실패'}));
+            alert(`${f.name}: ${err.detail || '업로드 실패'}`);
+            continue;
+          }
+          added++;
+        } catch (err) {
+          alert(`${f.name}: 업로드 실패`);
+        }
+      }
+      const refreshed = await fetchJob(currentJobId);
+      renderClips(refreshed);
+      statusEl.textContent = `외부 영상 ${added}개를 후보에 추가했습니다.`;
+    };
 
     // 페이지 로드 시 자동 목록 로드 + URL ?job=xxx 지원
     window.addEventListener('DOMContentLoaded', async () => {
@@ -1351,6 +1983,27 @@
       }
     });
 
+    function setAIMode(mode) {
+      document.getElementById('aiSingleForm').style.display = mode === 'single' ? '' : 'none';
+      document.getElementById('aiSplitForm').style.display  = mode === 'split'  ? '' : 'none';
+      document.getElementById('aiModeSingle').classList.toggle('active', mode === 'single');
+      document.getElementById('aiModeSplit').classList.toggle('active', mode === 'split');
+    }
+
+    function setLogMode(mode) {
+      document.getElementById('logSingleForm').style.display = mode === 'single' ? '' : 'none';
+      document.getElementById('logSplitForm').style.display  = mode === 'split'  ? '' : 'none';
+      document.getElementById('logModeSingle').classList.toggle('active', mode === 'single');
+      document.getElementById('logModeSplit').classList.toggle('active', mode === 'split');
+    }
+
+    function setLogInputMode(mode) {
+      document.getElementById('logFileMode').style.display = mode === 'file' ? '' : 'none';
+      document.getElementById('logLiveMode').style.display = mode === 'live' ? '' : 'none';
+      document.getElementById('logInputFile').classList.toggle('active', mode === 'file');
+      document.getElementById('logInputLive').classList.toggle('active', mode === 'live');
+    }
+
     uploadBtn.onclick = async () => {
       if (!videoInput.files[0]) { alert('영상을 선택하세요.'); return; }
       const formData = new FormData();
@@ -1361,6 +2014,34 @@
       const data = await res.json();
       currentJobId = data.job_id;
       startPolling(currentJobId);
+    };
+
+    document.getElementById('splitUploadBtn').onclick = async () => {
+      const f1 = document.getElementById('aiFirstHalf').files[0];
+      const f2 = document.getElementById('aiSecondHalf').files[0];
+      if (!f1 || !f2) { alert('전반, 후반 영상을 모두 선택하세요.'); return; }
+      const formData = new FormData();
+      formData.append('first_half', f1);
+      formData.append('second_half', f2);
+      formData.append('highlight_count', document.getElementById('splitCountInput').value);
+      statusEl.textContent = '업로드 중... (전반+후반 합치는 중)';
+      const res = await fetch('/api/jobs/split', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        statusEl.textContent = `오류: ${err.detail || '업로드 실패'}`;
+        return;
+      }
+      const data = await res.json();
+      currentJobId = data.job_id;
+      startPolling(currentJobId);
+    };
+
+    document.getElementById('splitResetBtn').onclick = () => {
+      document.getElementById('aiFirstHalf').value = '';
+      document.getElementById('aiSecondHalf').value = '';
+      statusEl.textContent = '대기 중';
+      clipGrid.innerHTML = '';
+      currentJobId = null;
     };
 
     // ── 로그 업로드 ───────────────────────────────
@@ -1378,22 +2059,31 @@
       document.getElementById('logFileInfo').textContent = f ? f.name : '';
     });
 
+    document.getElementById('logSplitDataInput').addEventListener('change', () => {
+      const f = document.getElementById('logSplitDataInput').files[0];
+      document.getElementById('logSplitFileInfo').textContent = f ? f.name : '';
+    });
+
     logUploadBtn.onclick = async () => {
       if (!logVideoInput.files[0]) { alert('영상을 선택하세요.'); return; }
-      if (!logDataInput.files[0]) { alert('로그 JSON 파일을 선택하세요.'); return; }
+      const matchId = document.getElementById('logMatchId').value.trim();
 
-      let rawLog;
-      try {
-        rawLog = await logDataInput.files[0].text();
-        JSON.parse(rawLog);
-      } catch {
-        alert('JSON 파일을 읽을 수 없거나 형식이 잘못됐습니다.');
-        return;
+      let rawLog = '[]';
+      if (!matchId) {
+        if (!logDataInput.files[0]) { alert('Match ID를 입력하거나 로그 JSON 파일을 선택하세요.'); return; }
+        try {
+          rawLog = await logDataInput.files[0].text();
+          JSON.parse(rawLog);
+        } catch {
+          alert('JSON 파일을 읽을 수 없거나 형식이 잘못됐습니다.');
+          return;
+        }
       }
 
       const formData = new FormData();
       formData.append('file', logVideoInput.files[0]);
       formData.append('log_data', rawLog);
+      formData.append('match_id', matchId);
       formData.append('second_half_start_min', halfStartMin.value);
       formData.append('second_half_start_sec_extra', halfStartSec.value);
       formData.append('highlight_count', logCountInput.value);
@@ -1413,12 +2103,743 @@
     logResetBtn.onclick = () => {
       logVideoInput.value = '';
       logDataInput.value = '';
+      document.getElementById('logMatchId').value = '';
       document.getElementById('logFileInfo').textContent = '';
       halfStartMin.value = '25';
       halfStartSec.value = '0';
       statusEl.textContent = '대기 중';
       clipGrid.innerHTML = '';
       currentJobId = null;
+    };
+
+    document.getElementById('logSplitUploadBtn').onclick = async () => {
+      const f1  = document.getElementById('logFirstHalf').files[0];
+      const f2  = document.getElementById('logSecondHalf').files[0];
+      const fLog = document.getElementById('logSplitDataInput').files[0];
+      if (!f1 || !f2) { alert('전반, 후반 영상을 모두 선택하세요.'); return; }
+      const matchId = document.getElementById('logSplitMatchId').value.trim();
+
+      let rawLog = '[]';
+      if (!matchId) {
+        if (!fLog) { alert('Match ID를 입력하거나 로그 JSON 파일을 선택하세요.'); return; }
+        try {
+          rawLog = await fLog.text();
+          JSON.parse(rawLog);
+        } catch {
+          alert('JSON 파일을 읽을 수 없거나 형식이 잘못됐습니다.');
+          return;
+        }
+      }
+
+      const formData = new FormData();
+      formData.append('first_half', f1);
+      formData.append('second_half', f2);
+      formData.append('log_data', rawLog);
+      formData.append('match_id', matchId);
+      formData.append('highlight_count', document.getElementById('logSplitCountInput').value);
+      statusEl.textContent = '업로드 중... (전반+후반 합치는 중)';
+
+      const res = await fetch('/api/log-jobs/split', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        statusEl.textContent = `오류: ${err.detail || '업로드 실패'}`;
+        return;
+      }
+      const data = await res.json();
+      currentJobId = data.job_id;
+      startPolling(currentJobId);
+    };
+
+    document.getElementById('logSplitResetBtn').onclick = () => {
+      document.getElementById('logFirstHalf').value = '';
+      document.getElementById('logSecondHalf').value = '';
+      document.getElementById('logSplitDataInput').value = '';
+      document.getElementById('logSplitMatchId').value = '';
+      document.getElementById('logSplitFileInfo').textContent = '';
+      statusEl.textContent = '대기 중';
+      clipGrid.innerHTML = '';
+      currentJobId = null;
+    };
+
+    // ── 영상 보며 기록 (라이브 로깅) ──────────────
+    const liveVideoInput = document.getElementById('liveVideoInput');
+    const liveVideo      = document.getElementById('liveVideo');
+    const liveControls   = document.getElementById('liveControls');
+    const liveCurrentTime= document.getElementById('liveCurrentTime');
+    const liveMarkList   = document.getElementById('liveMarkList');
+    const liveHalfInfo   = document.getElementById('liveHalfInfo');
+    let liveObjectUrl = null;
+    let liveMarks = [];          // [{video_sec, event_type}]
+    let liveHalfStartSec = null; // 후반 시작 시각(초). null이면 전체 전반.
+
+    function fmtLiveTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = (sec % 60).toFixed(1).padStart(4, '0');
+      return `${m}:${s}`;
+    }
+
+    liveVideoInput.addEventListener('change', () => {
+      const f = liveVideoInput.files[0];
+      if (!f) return;
+      if (liveObjectUrl) URL.revokeObjectURL(liveObjectUrl);
+      liveObjectUrl = URL.createObjectURL(f);
+      liveVideo.src = liveObjectUrl;
+      liveVideo.style.display = '';
+      liveControls.style.display = '';
+      liveMarks = [];
+      liveHalfStartSec = null;
+      renderLiveMarks();
+      renderLiveHalfInfo();
+    });
+
+    liveVideo.ontimeupdate = () => { liveCurrentTime.textContent = fmtLiveTime(liveVideo.currentTime); };
+
+    function addLiveMark(eventType) {
+      if (!liveVideo.src) return;
+      liveMarks.push({ video_sec: liveVideo.currentTime, event_type: eventType });
+      liveMarks.sort((a, b) => a.video_sec - b.video_sec);
+      renderLiveMarks();
+    }
+
+    document.getElementById('liveGoalBtn').onclick = () => addLiveMark('GOAL');
+    document.getElementById('liveHlBtn').onclick   = () => addLiveMark('HIGHLIGHT');
+
+    document.getElementById('liveHalfBtn').onclick = () => {
+      if (!liveVideo.src) return;
+      liveHalfStartSec = liveVideo.currentTime;
+      renderLiveHalfInfo();
+      renderLiveMarks();
+    };
+
+    function renderLiveHalfInfo() {
+      liveHalfInfo.textContent = liveHalfStartSec == null
+        ? '후반 시작 미설정 (전체를 전반으로 처리)'
+        : `후반 시작: ${fmtLiveTime(liveHalfStartSec)} (이후 기록은 후반으로 저장)`;
+    }
+
+    function renderLiveMarks() {
+      liveMarkList.innerHTML = '';
+      if (!liveMarks.length) {
+        liveMarkList.innerHTML = '<span class="muted" style="font-size:12px;">아직 기록한 시점이 없습니다.</span>';
+        return;
+      }
+      liveMarks.forEach((m, i) => {
+        const isSecond = liveHalfStartSec != null && m.video_sec >= liveHalfStartSec;
+        const half = isSecond ? '후반' : '전반';
+        const label = m.event_type === 'GOAL' ? '⚽ 골' : '⭐ 하이라이트';
+        const color = m.event_type === 'GOAL' ? '#e63946' : '#ff8a1d';
+        const item = document.createElement('div');
+        item.className = 'row';
+        item.style.cssText = 'align-items:center; gap:10px; background:#2a1f17; padding:6px 10px; border-radius:8px;';
+        item.innerHTML = `
+          <span style="font-size:16px; font-weight:700; color:${color}; min-width:120px; cursor:pointer;">${fmtLiveTime(m.video_sec)}</span>
+          <span class="muted" style="min-width:40px;">${half}</span>
+          <span style="flex:1; color:${color};">${label}</span>
+          <button class="secondary" style="padding:2px 10px;">삭제</button>`;
+        item.querySelector('span').addEventListener('click', () => {
+          liveVideo.currentTime = m.video_sec;
+          liveVideo.pause();
+        });
+        item.querySelector('button').onclick = () => { liveMarks.splice(i, 1); renderLiveMarks(); };
+        liveMarkList.appendChild(item);
+      });
+    }
+
+    document.getElementById('liveSubmitBtn').onclick = async () => {
+      if (!liveVideoInput.files[0]) { alert('영상을 선택하세요.'); return; }
+      if (!liveMarks.length) { alert('기록한 시점이 없습니다. 골/하이라이트를 먼저 기록하세요.'); return; }
+
+      // 기존 로그 포맷({data:[{elapsedSeconds, halfType, eventLog}]})으로 변환
+      const data = liveMarks.map((m, idx) => {
+        const isSecond = liveHalfStartSec != null && m.video_sec >= liveHalfStartSec;
+        const elapsed = isSecond ? (m.video_sec - liveHalfStartSec) : m.video_sec;
+        return {
+          id: idx,
+          elapsedSeconds: Math.round(elapsed),
+          halfType: isSecond ? 'SECOND_HALF' : 'FIRST_HALF',
+          eventLog: m.event_type,
+          description: 'live',
+        };
+      });
+
+      const halfStart = liveHalfStartSec == null ? 0 : Math.round(liveHalfStartSec);
+      const formData = new FormData();
+      formData.append('file', liveVideoInput.files[0]);
+      formData.append('log_data', JSON.stringify({ status: 200, data }));
+      formData.append('second_half_start_min', String(Math.floor(halfStart / 60)));
+      formData.append('second_half_start_sec_extra', String(halfStart % 60));
+      formData.append('highlight_count', document.getElementById('liveCountInput').value);
+      statusEl.textContent = `로그 ${data.length}개 기록 → 업로드 중...`;
+
+      const res = await fetch('/api/log-jobs', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        statusEl.textContent = `오류: ${err.detail || '업로드 실패'}`;
+        return;
+      }
+      const resData = await res.json();
+      currentJobId = resData.job_id;
+      startPolling(currentJobId);
+    };
+
+    document.getElementById('liveResetBtn').onclick = () => {
+      liveVideoInput.value = '';
+      if (liveObjectUrl) { URL.revokeObjectURL(liveObjectUrl); liveObjectUrl = null; }
+      liveVideo.removeAttribute('src');
+      liveVideo.load();
+      liveVideo.style.display = 'none';
+      liveControls.style.display = 'none';
+      liveMarks = [];
+      liveHalfStartSec = null;
+      statusEl.textContent = '대기 중';
+      clipGrid.innerHTML = '';
+      currentJobId = null;
+    };
+
+    // 라이브 로깅 단축키 (로그+AI 탭의 라이브 모드에서만)
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('panelLog').style.display === 'none') return;
+      if (document.getElementById('logLiveMode').style.display === 'none') return;
+      if (!liveVideo.src) return;
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
+      if (e.key === 'ArrowRight') { liveVideo.currentTime += e.shiftKey ? 0.1 : 1; e.preventDefault(); }
+      else if (e.key === 'ArrowLeft')  { liveVideo.currentTime -= e.shiftKey ? 0.1 : 1; e.preventDefault(); }
+      else if (e.key === ' ') { liveVideo.paused ? liveVideo.play() : liveVideo.pause(); e.preventDefault(); }
+      else if (e.key === 'g' || e.key === 'G') { addLiveMark('GOAL'); e.preventDefault(); }
+      else if (e.key === 'h' || e.key === 'H') { addLiveMark('HIGHLIGHT'); e.preventDefault(); }
+    });
+
+    // ── 개인 클립 (선수 클릭 추적 → 공 관여 구간) ──────────────
+    const pcVideoInput = document.getElementById('pcVideoInput');
+    const pcDetectBtn  = document.getElementById('pcDetectBtn');
+    const pcResetBtn   = document.getElementById('pcResetBtn');
+    const pcStageWrap  = document.getElementById('pcStageWrap');
+    const pcVideo      = document.getElementById('pcVideo');
+    const pcCanvas     = document.getElementById('pcCanvas');
+    const pcLostBanner = document.getElementById('pcLostBanner');
+    const pcSeedInfo   = document.getElementById('pcSeedInfo');
+    const pcPlayBtn    = document.getElementById('pcPlayBtn');
+    const pcClearSeedBtn = document.getElementById('pcClearSeedBtn');
+    const pcExtractBtn = document.getElementById('pcExtractBtn');
+
+    let pcJobId = null, pcFps = 30, pcStride = 7;
+    // 박스 좌표는 원본 픽셀 기준. 재생은 저화질 프록시일 수 있으므로 캔버스 스케일은
+    // 프록시 해상도(pcVideo.videoWidth)가 아니라 원본 W/H 로 한다.
+    let pcVideoW = 0, pcVideoH = 0, pcHasProxy = false, pcProxyTimer = null;
+    let pcFramesSorted = [], pcByFrame = new Map();
+    // 지정 선수: 시간 구간에 묶인 track 들. 같은 track_id 가 화면전환 후 다른 선수에게
+    // 재사용되므로(검증됨), id 전체가 아니라 클릭 시점이 속한 연속 구간만 묶는다.
+    // 한 선수가 여러 id 를 거치면(169→232) 각 구간을 누적 → 169 초기 기록이 보존됨.
+    let pcSeeds = [];          // [{tid, fromF, toF}] (프레임 단위 구간)
+    let pcTrackFrames = new Map();  // tid → 정렬된 등장 프레임 배열 (구간 계산용)
+    let pcEvents = [];         // 영상 전체 공 보유 이벤트(/events) — 클릭 시 그 시각의 이벤트를 '선택'
+    // 사용자가 선택한 터치들. 클릭=추적 시드(❌)가 아니라 '이 순간 = 내 선수'(✅)라는 보증.
+    // 트랙 id 가 직후 바뀌어도 무관 — 신원은 사용자 눈이 확정한다.
+    //   event 선택: {key,kind:'event',evId,track_id,start,end,n_touch}
+    //   수동 마크: {key,kind:'mark',t,start:t,end:t}  (공 미탐지로 자동 이벤트가 없을 때)
+    let pcPicks = [];
+    let pcLostCount = 0, pcPollTimer = null;
+    const PC_LOST_LIMIT = 4;   // 지정 트랙 연속 미검출 샘플 수 → 끊김 판정
+    const PC_SEG_GAP_SEC = 2.0; // 같은 id 등장 사이 이 간격 초과 → 다른 구간(=다른 선수)으로 분리
+    // 신원 검증 상태
+    let pcExcludes = [], pcExPending = null;   // 제외 구간 [start,end]초 / 지정중인 시작
+    let pcTLDirty = true, pcTLLayer = null;    // 정적 타임라인(초록/빨강) 캐시
+    const PC_JUMP_K = 2.5;     // 연속 샘플 위치변화 > 박스높이×K → '다른 선수로 바뀜' 의심
+
+    // 클릭한 track_id 가 그 프레임 기준 속한 연속 구간 {fromF, toF} 을 반환.
+    // 큰 공백(PC_SEG_GAP_SEC 초과)으로 갈라진 같은 id 의 다른 구간은 포함하지 않는다.
+    function pcSegmentWindow(tid, frame) {
+      const frames = pcTrackFrames.get(tid);
+      if (!frames || !frames.length) return { tid, fromF: frame, toF: frame };
+      const gap = Math.max(pcStride * 3, Math.round(pcFps * PC_SEG_GAP_SEC));
+      let i = 0;
+      while (i < frames.length && frames[i] < frame) i++;
+      if (i >= frames.length) i = frames.length - 1;
+      if (i > 0 && Math.abs(frames[i-1]-frame) <= Math.abs(frames[i]-frame)) i--;
+      let lo = i, hi = i;
+      while (lo > 0 && frames[lo]-frames[lo-1] <= gap) lo--;
+      while (hi < frames.length-1 && frames[hi+1]-frames[hi] <= gap) hi++;
+      return { tid, fromF: frames[lo], toF: frames[hi] };
+    }
+    function pcSeedActiveAt(tid, frame) {
+      for (const s of pcSeeds) if (s.tid === tid && s.fromF <= frame && frame <= s.toF) return true;
+      return false;
+    }
+
+    pcDetectBtn.onclick = async () => {
+      if (!pcVideoInput.files[0]) { alert('영상을 선택하세요.'); return; }
+      const fd = new FormData();
+      fd.append('file', pcVideoInput.files[0]);
+      statusEl.textContent = '업로드 중...';
+      const res = await fetch('/api/player-jobs', { method: 'POST', body: fd });
+      if (!res.ok) { const e = await res.json().catch(()=>({})); statusEl.textContent = `오류: ${e.detail||'업로드 실패'}`; return; }
+      const data = await res.json();
+      pcJobId = data.job_id;
+      pcPollDetect();
+    };
+
+    function pcPollDetect() {
+      if (pcPollTimer) clearInterval(pcPollTimer);
+      pcPollTimer = setInterval(async () => {
+        const data = await fetchJob(pcJobId);
+        statusEl.textContent = `${data.status}: ${data.message}`;
+        if (data.status === 'done') {
+          clearInterval(pcPollTimer);
+          pcFps = data.fps || 30;
+          pcVideoW = data.video_w || 0; pcVideoH = data.video_h || 0;
+          pcHasProxy = !!data.proxy_file;
+          await pcLoadDetections(data);
+          await pcLoadEvents();
+          pcSetupStage();
+        } else if (data.status === 'error') {
+          clearInterval(pcPollTimer);
+        }
+      }, 3000);
+    }
+
+    async function pcLoadDetections(meta) {
+      const detFile = meta.detection_file || 'player_detections.csv';
+      const txt = await fetch(`/runs/${pcJobId}/${detFile}`).then(r=>r.text());
+      pcByFrame = new Map();
+      const lines = txt.trim().split('\n');
+      const header = lines[0].split(',');
+      const ix = {}; header.forEach((h,i)=> ix[h.trim()] = i);
+      for (let i=1;i<lines.length;i++){
+        const c = lines[i].split(',');
+        if (c.length < header.length) continue;
+        const frame = parseInt(c[ix.frame]);
+        const o = { cls: c[ix.class_name], tid: parseInt(c[ix.track_id]),
+                    cx: parseFloat(c[ix.cx]), cy: parseFloat(c[ix.cy]),
+                    w: parseFloat(c[ix.w]), h: parseFloat(c[ix.h]) };
+        if (!pcByFrame.has(frame)) pcByFrame.set(frame, []);
+        pcByFrame.get(frame).push(o);
+      }
+      pcFramesSorted = [...pcByFrame.keys()].sort((a,b)=>a-b);
+      pcStride = pcFramesSorted.length > 1 ? (pcFramesSorted[1]-pcFramesSorted[0]) : 7;
+      // tid → 정렬된 등장 프레임 배열 (구간 계산용)
+      pcTrackFrames = new Map();
+      for (const f of pcFramesSorted) {
+        for (const o of pcByFrame.get(f)) {
+          if (o.cls !== 'player' || o.tid === -1) continue;
+          if (!pcTrackFrames.has(o.tid)) pcTrackFrames.set(o.tid, []);
+          pcTrackFrames.get(o.tid).push(f);
+        }
+      }
+      pcSeeds = []; pcPicks = [];
+      pcExcludes = []; pcExPending = null; pcTLDirty = true;
+    }
+
+    // 영상 전체 공 보유 이벤트 로드(클립 후보 소스). 시드 구간 것만 필름스트립에 표시.
+    async function pcLoadEvents() {
+      pcEvents = [];
+      try {
+        const r = await fetch(`/api/player-jobs/${pcJobId}/events`);
+        if (r.ok) { const d = await r.json(); pcEvents = d.events || []; }
+      } catch {}
+    }
+
+    function pcSetupStage() {
+      pcStageWrap.style.display = '';
+      pcVideo.src = `/api/player-jobs/${pcJobId}/video`;
+      pcVideo.muted = true;  // 고배속에서 오디오가 재생을 막는 브라우저 회피(리뷰엔 소리 불필요)
+      pcVideo.playbackRate = parseFloat(document.getElementById('pcSpeed').value) || 1;
+      // 프록시 없고 고해상도면 '고배속 재생 최적화' 버튼 노출 (원본은 고비트레이트라 3·4배속 멈춤)
+      const proxyBtn = document.getElementById('pcProxyBtn');
+      proxyBtn.style.display = (!pcHasProxy && (pcVideoH === 0 || pcVideoH > 720)) ? '' : 'none';
+      document.getElementById('pcProxyInfo').textContent =
+        proxyBtn.style.display === '' ? '← 3·4배속이 멈추면 누르세요(저화질 재생본 생성, 탐지·클립화질 영향 없음)' : '';
+      pcRenderPicks();
+      pcVideo.onloadedmetadata = pcResizeCanvas;
+      requestAnimationFrame(pcDrawLoop);
+    }
+
+    function pcResizeCanvas() {
+      pcCanvas.width = pcCanvas.clientWidth;
+      pcCanvas.height = pcCanvas.clientHeight;
+    }
+    window.addEventListener('resize', pcResizeCanvas);
+
+    function pcCurrentFrame() {
+      const fExact = pcVideo.currentTime * pcFps;
+      const base = pcFramesSorted.length ? pcFramesSorted[0] : 0;
+      return Math.round((fExact - base)/pcStride)*pcStride + base;
+    }
+
+    function pcDrawLoop() {
+      if (pcStageWrap.style.display === 'none') return;
+      if (pcCanvas.width !== pcCanvas.clientWidth || pcCanvas.height !== pcCanvas.clientHeight) pcResizeCanvas();
+      const ctx = pcCanvas.getContext('2d');
+      ctx.clearRect(0,0,pcCanvas.width,pcCanvas.height);
+      // 영상 프레임을 캔버스에 직접 그림 → 브라우저가 고배속에서 <video> 자체 화면 갱신을
+      // throttle 해도(3·4배속 멈춤) 디코딩된 최신 프레임을 우리가 그려 우회한다.
+      if (pcVideo.readyState >= 2) {
+        try { ctx.drawImage(pcVideo, 0, 0, pcCanvas.width, pcCanvas.height); } catch {}
+      }
+      const vw = pcVideoW || pcVideo.videoWidth || 1, vh = pcVideoH || pcVideo.videoHeight || 1;
+      const sx = pcCanvas.width / vw, sy = pcCanvas.height / vh;
+      const curF = pcCurrentFrame();
+      const boxes = pcByFrame.get(curF) || [];
+      // 현재 프레임의 공 보유 이벤트(클릭하면 이게 선택됨) → 그 선수 박스를 초록으로 강조
+      const actEv = pcActiveEvent(curF, null);
+      const holderTid = actEv ? actEv.track_id : null;
+      const picked = actEv && pcPicks.some(p => p.key === 'e' + actEv.id);
+      for (const b of boxes) {
+        if (b.cls !== 'player' && b.cls !== 'ball') continue;
+        const isBall = b.cls === 'ball';
+        const isHolder = !isBall && holderTid !== null && b.tid === holderTid;
+        const x=(b.cx-b.w/2)*sx, y=(b.cy-b.h/2)*sy, w=b.w*sx, h=b.h*sy;
+        ctx.lineWidth = isHolder ? 3 : 1.5;
+        ctx.strokeStyle = isBall ? '#ffd166' : (isHolder ? (picked ? '#39d353' : '#ffd166') : 'rgba(150,150,150,0.7)');
+        ctx.strokeRect(x,y,w,h);
+        if (isHolder) {
+          ctx.fillStyle = picked ? '#39d353' : '#ffd166'; ctx.font = '12px sans-serif';
+          ctx.fillText(picked ? '✓ 선택됨' : '공 보유 (클릭)', x, Math.max(10, y - 3));
+        }
+      }
+      pcDrawTimelineFrame();
+      requestAnimationFrame(pcDrawLoop);
+    }
+
+    // 현재 프레임 F 의 공 보유 이벤트. C(클릭한 선수 track_id)가 주어지면 그 선수의 이벤트 우선.
+    function pcActiveEvent(F, C) {
+      let any = null;
+      for (const e of pcEvents) {
+        if (e.start_frame <= F && F <= e.end_frame) {
+          if (C != null && e.track_id === C) return e;
+          if (!any) any = e;
+        }
+      }
+      return any;
+    }
+    // 클릭 = '이 터치가 내 선수다' 보증. 추적을 따라가지 않으므로 id 가 직후 바뀌어도 무관.
+    // 그 시각의 공 보유 이벤트를 선택(없으면 = 공 미탐지 → 그 시각 수동 마크). 같은 걸 다시
+    // 클릭하면 해제(토글).
+    pcCanvas.addEventListener('click', (e) => {
+      const rect = pcCanvas.getBoundingClientRect();
+      const px = (e.clientX-rect.left)/rect.width*(pcVideoW || pcVideo.videoWidth || 1);
+      const py = (e.clientY-rect.top)/rect.height*(pcVideoH || pcVideo.videoHeight || 1);
+      const F = pcCurrentFrame();
+      const T = pcVideo.currentTime || (F / pcFps);
+      const boxes = (pcByFrame.get(F)||[]).filter(b=>b.cls==='player' && b.tid!==-1);
+      // 클릭한 선수(박스 안 최근접) → 그 선수의 공 보유 이벤트 우선 매칭
+      let C = null, bestD = Infinity;
+      for (const b of boxes){ if(Math.abs(px-b.cx)<=b.w/2 && Math.abs(py-b.cy)<=b.h/2){
+        const d=Math.hypot(px-b.cx,py-b.cy); if(d<bestD){C=b.tid;bestD=d;} } }
+      const ev = pcActiveEvent(F, C);
+      if (ev) {
+        pcTogglePick({ key:'e'+ev.id, kind:'event', evId:ev.id, track_id:ev.track_id,
+                       start:ev.start, end:ev.end, n_touch:ev.n_touch });
+      } else {
+        const t = +T.toFixed(1);
+        pcTogglePick({ key:'m'+t, kind:'mark', t, start:t, end:t });
+      }
+    });
+    function pcTogglePick(pick) {
+      const i = pcPicks.findIndex(p => p.key === pick.key);
+      if (i >= 0) pcPicks.splice(i, 1); else pcPicks.push(pick);
+      pcRenderPicks(); pcUpdatePreview();
+    }
+
+    pcPlayBtn.onclick = () => { pcVideo.paused ? pcVideo.play() : pcVideo.pause(); };
+    // 고배속 재생 최적화: 기존 job 에 재생 프록시만 즉석 생성(재탐지 X) → 생성되면 영상 교체.
+    document.getElementById('pcProxyBtn').onclick = async () => {
+      const btn = document.getElementById('pcProxyBtn'), info = document.getElementById('pcProxyInfo');
+      btn.disabled = true; info.textContent = '재생용 저화질 영상 생성 중... (수 분 소요)';
+      try { await fetch(`/api/player-jobs/${pcJobId}/proxy`, { method:'POST' }); }
+      catch { info.textContent = '요청 실패'; btn.disabled = false; return; }
+      if (pcProxyTimer) clearInterval(pcProxyTimer);
+      pcProxyTimer = setInterval(async () => {
+        const m = await fetchJob(pcJobId);
+        if (m && m.proxy_file) {
+          clearInterval(pcProxyTimer);
+          pcHasProxy = true; btn.style.display = 'none';
+          info.textContent = '✅ 최적화 완료 — 3·4배속 재생 가능';
+          const t = pcVideo.currentTime || 0;
+          pcVideo.src = `/api/player-jobs/${pcJobId}/video?t=${Date.now()}`;
+          pcVideo.onloadedmetadata = () => { pcResizeCanvas(); try { pcVideo.currentTime = t; } catch {} };
+        } else if (m && m.proxy_status === 'error') {
+          clearInterval(pcProxyTimer); btn.disabled = false; info.textContent = '생성 실패 — 원본으로 재생됩니다.';
+        }
+      }, 3000);
+    };
+    const pcSpeed = document.getElementById('pcSpeed');
+    pcSpeed.onchange = () => { pcVideo.playbackRate = parseFloat(pcSpeed.value) || 1; };
+    pcClearSeedBtn.onclick = () => { pcPicks = []; pcLostCount=0; pcLostBanner.style.display='none'; pcRenderPicks(); pcUpdatePreview(); };
+
+    // 개인 클립 탭 단축키: Space 재생/정지 · ←→ 1초(Shift+←→ 0.1초) 이동.
+    // 재생하다 타깃 선수 보이면 Space로 멈추고 클릭 → Space로 다시 재생, 끊기면 재클릭하는 플로우용.
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('panelPlayer').style.display === 'none') return;
+      if (!pcVideo.src) return;
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
+      if (e.key === ' ') { pcVideo.paused ? pcVideo.play() : pcVideo.pause(); e.preventDefault(); }
+      else if (e.key === 'ArrowRight') { pcVideo.currentTime += e.shiftKey ? 0.1 : 1; e.preventDefault(); }
+      else if (e.key === 'ArrowLeft')  { pcVideo.currentTime -= e.shiftKey ? 0.1 : 1; e.preventDefault(); }
+    });
+
+    // picks → 추출/미리보기 payload (이벤트=track_window, 수동마크=direct_marks)
+    function pcPicksPayload() {
+      return {
+        track_windows: pcPicks.filter(p => p.kind === 'event').map(p => [p.track_id, p.start, p.end]),
+        direct_marks: pcPicks.filter(p => p.kind === 'mark').map(p => p.t),
+        pad_before: parseFloat(document.getElementById('pcPadBefore').value),
+        pad_after: parseFloat(document.getElementById('pcPadAfter').value),
+        exclude_intervals: [],
+      };
+    }
+    pcExtractBtn.onclick = async () => {
+      if (!pcPicks.length) { alert('공 잡는 순간 클릭해 터치를 선택하세요.'); return; }
+      pcExtractBtn.disabled = true;
+      statusEl.textContent = '공 관여 구간 추출 중...';
+      const res = await fetch(`/api/player-jobs/${pcJobId}/extract`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(pcPicksPayload())
+      });
+      pcExtractBtn.disabled = false;
+      if (!res.ok) { const e=await res.json().catch(()=>({})); statusEl.textContent=`오류: ${e.detail||'추출 실패'}`; return; }
+      const data = await res.json();
+      statusEl.textContent = `추출 완료: ${data.clip_count}개 클립`;
+      pcRenderClips(data);
+    };
+
+    let pcClipData = { segments: [] };       // 마지막 추출 결과(삭제 후 재렌더용)
+    const pcClipSel = new Set();             // 선택된 클립 파일명(선택 삭제용)
+    function pcRenderClips(data) {
+      if (data) { pcClipData = data; pcClipSel.clear(); }
+      const segs = (pcClipData.segments || []).filter(s => s.clip);
+      clipGrid.innerHTML = '';
+      if (!segs.length) {
+        clipGrid.innerHTML = '<div class="muted">공 관여 구간을 찾지 못했습니다. 선수 지정을 확인하거나 추가로 클릭해 보세요.</div>';
+        return;
+      }
+      // 툴바: 선택 개수 / 전체선택 / 선택삭제
+      const bar = document.createElement('div');
+      bar.style.cssText = 'grid-column:1/-1; display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:4px;';
+      const info = document.createElement('span'); info.className = 'muted'; info.style.fontSize = '12px';
+      const updInfo = () => info.textContent = `클립 ${segs.length}개 · 선택 ${pcClipSel.size}개`;
+      const selAll = document.createElement('button'); selAll.className = 'secondary'; selAll.style.fontSize = '12px';
+      selAll.textContent = '전체 선택/해제';
+      selAll.onclick = () => {
+        if (pcClipSel.size === segs.length) pcClipSel.clear();
+        else segs.forEach(s => pcClipSel.add(s.clip));
+        pcRenderClips();
+      };
+      const delSel = document.createElement('button'); delSel.style.cssText = 'font-size:12px; background:#7a2230;';
+      delSel.textContent = '🗑 선택 삭제';
+      delSel.onclick = () => {
+        if (!pcClipSel.size) { alert('삭제할 클립을 선택하세요.'); return; }
+        if (confirm(`선택한 ${pcClipSel.size}개 클립을 삭제할까요?`)) pcDeleteClips([...pcClipSel]);
+      };
+      bar.append(info, selAll, delSel); clipGrid.appendChild(bar); updInfo();
+
+      segs.forEach((seg) => {
+        const card = document.createElement('div');
+        card.className = 'clip-card'; card.style.position = 'relative';
+        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = pcClipSel.has(seg.clip);
+        cb.style.cssText = 'position:absolute; top:8px; left:8px; width:18px; height:18px; z-index:2; cursor:pointer;';
+        cb.onclick = (e) => { e.stopPropagation(); cb.checked ? pcClipSel.add(seg.clip) : pcClipSel.delete(seg.clip); updInfo(); };
+        const v = document.createElement('video');
+        v.controls = true; v.preload = 'metadata'; v.style.width = '100%';
+        v.src = `/api/jobs/${pcJobId}/clips/${encodeURIComponent(seg.clip)}/file`;
+        const cap = document.createElement('div');
+        cap.className = 'muted'; cap.style.fontSize = '11px';
+        cap.textContent = `공 관여 ${seg.involve_start}s~${seg.involve_end}s (클립 ${seg.start}~${seg.end}s)`;
+        const del = document.createElement('button');
+        del.className = 'secondary'; del.style.cssText = 'font-size:11px; margin-top:4px;'; del.textContent = '🗑 삭제';
+        del.onclick = () => { if (confirm('이 클립을 삭제할까요?')) pcDeleteClips([seg.clip]); };
+        card.append(cb, v, cap, del); clipGrid.appendChild(card);
+      });
+    }
+    async function pcDeleteClips(names) {
+      statusEl.textContent = `클립 삭제 중 (${names.length}개)...`;
+      let ok = 0;
+      for (const name of names) {
+        try {
+          const r = await fetch(`/api/jobs/${pcJobId}/clips/${encodeURIComponent(name)}`, { method: 'DELETE' });
+          if (r.ok) ok++;
+        } catch {}
+      }
+      const gone = new Set(names);
+      pcClipData.segments = (pcClipData.segments || []).filter(s => !gone.has(s.clip));
+      names.forEach(n => pcClipSel.delete(n));
+      statusEl.textContent = `클립 ${ok}개 삭제됨`;
+      pcRenderClips();
+    }
+
+    // ---- 신원 검증 타임라인 ----
+    function pcVideoDuration() {
+      if (pcVideo && isFinite(pcVideo.duration) && pcVideo.duration > 0) return pcVideo.duration;
+      const last = pcFramesSorted.length ? pcFramesSorted[pcFramesSorted.length-1] : 0;
+      return last / pcFps;
+    }
+    function pcSeedBoxInList(boxes, frame) {
+      if (!boxes) return null;
+      for (const b of boxes) if (b.cls === 'player' && pcSeedActiveAt(b.tid, frame)) return b;
+      return null;
+    }
+    // 선택한 터치(picks) 필름스트립. 시각순으로 칩 표시 — ▶이동 / ✕제거.
+    function pcRenderPicks() {
+      const wrap = document.getElementById('pcEventWrap');
+      const strip = document.getElementById('pcEventStrip');
+      pcSeedInfo.textContent = pcPicks.length
+        ? `선택한 터치 ${pcPicks.length}개`
+        : '공 잡는 순간 클릭해 터치를 선택하세요 (id 가 바뀌어도 무관).';
+      if (!pcPicks.length) { wrap.style.display = 'none'; strip.innerHTML = ''; return; }
+      wrap.style.display = '';
+      document.getElementById('pcEventStat').textContent = `${pcPicks.length}개 선택됨`;
+      strip.innerHTML = '';
+      [...pcPicks].sort((a, b) => a.start - b.start).forEach(p => {
+        const t = Math.floor(p.start), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
+        const chip = document.createElement('div');
+        chip.style.cssText = 'flex:0 0 auto; min-width:96px; border-radius:8px; padding:6px 8px; font-size:11px;'
+          + 'border:1px solid #39d353; background:#16240f;';
+        const lbl = document.createElement('div');
+        lbl.style.cssText = 'font-weight:600; color:#39d353;';
+        lbl.textContent = p.kind === 'event' ? `${mm}:${ss} · ${p.n_touch}터치` : `${mm}:${ss} · 수동`;
+        const btns = document.createElement('div');
+        btns.style.cssText = 'display:flex; gap:4px; margin-top:4px;';
+        const jump = document.createElement('button');
+        jump.className = 'secondary'; jump.style.fontSize = '11px'; jump.textContent = '▶'; jump.title = '이 구간으로 이동';
+        jump.onclick = () => { pcVideo.currentTime = p.start; pcVideo.pause(); };
+        const del = document.createElement('button');
+        del.className = 'secondary'; del.style.fontSize = '11px'; del.textContent = '✕'; del.title = '선택 해제';
+        del.onclick = () => { const i = pcPicks.findIndex(x => x.key === p.key); if (i>=0) pcPicks.splice(i,1); pcRenderPicks(); pcUpdatePreview(); };
+        btns.append(jump, del); chip.append(lbl, btns); strip.appendChild(chip);
+      });
+    }
+    // 추출 전 '예상 클립 수' 미리보기 — 컷 없이 백엔드가 구간만 계산(추출과 동일 로직).
+    // 선택 바뀔 때마다 디바운스 호출.
+    let pcPreviewTimer = null, pcPreviewSeq = 0;
+    function pcUpdatePreview() {
+      const el = document.getElementById('pcPreview');
+      if (!pcPicks.length) { el.textContent = ''; return; }
+      if (!pcJobId) return;
+      el.textContent = '예상 계산 중…'; el.style.color = '#8a7c70';
+      clearTimeout(pcPreviewTimer);
+      const seq = ++pcPreviewSeq;
+      pcPreviewTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/player-jobs/${pcJobId}/preview`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(pcPicksPayload())
+          });
+          if (seq !== pcPreviewSeq) return;   // 더 최신 요청이 떴으면 무시
+          if (!res.ok) { el.textContent = ''; return; }
+          const d = await res.json();
+          const mins = Math.floor((d.total_seconds||0)/60), secs = Math.round((d.total_seconds||0)%60);
+          const dur = mins ? `${mins}분 ${secs}초` : `${secs}초`;
+          el.style.color = d.clip_count ? '#39d353' : '#8a7c70';
+          el.textContent = d.clip_count ? `예상 ${d.clip_count}개 · 총 ${dur}` : '관여 구간 없음';
+        } catch { if (seq === pcPreviewSeq) el.textContent = ''; }
+      }, 350);
+    }
+    function pcBuildTimelineLayer() {
+      const cv = document.getElementById('pcTimeline');
+      const W = cv.clientWidth || 600, H = 34;
+      cv.width = W; cv.height = H;
+      const layer = document.createElement('canvas'); layer.width = W; layer.height = H;
+      const ctx = layer.getContext('2d');
+      ctx.fillStyle = '#161616'; ctx.fillRect(0,0,W,H);
+      pcTLLayer = layer;
+      const D = pcVideoDuration();
+      if (D <= 0) return;
+      const slabW = Math.max(1, (pcStride/pcFps)/D*W);
+      let covered = 0, gaps = 0, jumps = 0, inGap = true, prev = null;
+      for (const f of pcFramesSorted) {
+        const b = pcSeedBoxInList(pcByFrame.get(f), f);
+        const sec = f / pcFps, x = sec/D*W;
+        if (b) {
+          ctx.fillStyle = '#2fae46'; ctx.fillRect(x, 7, slabW, H-14);
+          covered++; inGap = false;
+          if (prev && (f - prev.f) <= 2*pcStride) {
+            const dist = Math.hypot(b.cx-prev.cx, b.cy-prev.cy);
+            if (dist > PC_JUMP_K * Math.max(b.h, prev.h, 1)) {
+              jumps++; ctx.fillStyle = '#ff5a5a'; ctx.fillRect(Math.max(0,x-1), 0, 3, H);
+            }
+          }
+          prev = { f, cx:b.cx, cy:b.cy, h:b.h };
+        } else {
+          if (!inGap) { inGap = true; gaps++; }
+          prev = null;
+        }
+      }
+      const cov = pcFramesSorted.length ? Math.round(covered/pcFramesSorted.length*100) : 0;
+      document.getElementById('pcVerifyStat').textContent =
+        `추적 커버리지 ${cov}% · 끊김 ${gaps}곳 · 위치급변 ${jumps}곳`;
+    }
+    function pcDrawTimelineFrame() {
+      const wrap = document.getElementById('pcVerifyWrap');
+      if (!wrap || wrap.style.display === 'none') return;
+      const cv = document.getElementById('pcTimeline');
+      if (pcTLDirty || cv.width !== cv.clientWidth) { pcBuildTimelineLayer(); pcTLDirty = false; }
+      if (!pcTLLayer) return;
+      const ctx = cv.getContext('2d');
+      const W = cv.width, H = cv.height, D = pcVideoDuration();
+      ctx.drawImage(pcTLLayer, 0, 0);
+      if (D <= 0) return;
+      ctx.fillStyle = 'rgba(255,60,60,0.35)';
+      for (const [s,e] of pcExcludes) ctx.fillRect(s/D*W, 0, Math.max(2,(e-s)/D*W), H);
+      if (pcExPending != null) { ctx.fillStyle = '#ffd166'; ctx.fillRect(pcExPending/D*W-1, 0, 2, H); }
+      ctx.fillStyle = '#fff'; ctx.fillRect((pcVideo.currentTime||0)/D*W-1, 0, 2, H);
+    }
+    function pcRenderExList() {
+      const wrap = document.getElementById('pcExList'); wrap.innerHTML = '';
+      pcExcludes.forEach((iv, i) => {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'background:rgba(255,60,60,0.18);border:1px solid rgba(255,60,60,0.45);color:#ff8a8a;border-radius:6px;padding:3px 8px;font-size:11px;display:inline-flex;gap:6px;align-items:center;';
+        chip.textContent = `제외 ${iv[0]}s~${iv[1]}s`;
+        const del = document.createElement('button'); del.textContent = '✕';
+        del.style.cssText = 'background:none;border:none;color:#ff8a8a;cursor:pointer;font-size:11px;padding:0;line-height:1;';
+        del.onclick = () => { pcExcludes.splice(i,1); pcRenderExList(); pcTLDirty = true; pcUpdatePreview(); };
+        chip.appendChild(del); wrap.appendChild(chip);
+      });
+    }
+    document.getElementById('pcTimeline').addEventListener('click', (e) => {
+      const r = e.currentTarget.getBoundingClientRect(), D = pcVideoDuration();
+      if (D <= 0) return;
+      pcVideo.currentTime = Math.max(0, Math.min(D, (e.clientX-r.left)/r.width*D));
+    });
+    document.getElementById('pcExStartBtn').onclick = () => {
+      pcExPending = pcVideo.currentTime || 0;
+      document.getElementById('pcExEndBtn').disabled = false;
+      document.getElementById('pcExInfo').textContent =
+        `제외 시작 ${pcExPending.toFixed(1)}s — 끝 위치로 이동 후 '제외 끝' 클릭`;
+    };
+    document.getElementById('pcExEndBtn').onclick = () => {
+      if (pcExPending == null) return;
+      const end = pcVideo.currentTime || 0;
+      const s = Math.min(pcExPending, end), e = Math.max(pcExPending, end);
+      if (e - s >= 0.1) pcExcludes.push([+s.toFixed(1), +e.toFixed(1)]);
+      pcExPending = null;
+      document.getElementById('pcExEndBtn').disabled = true;
+      document.getElementById('pcExInfo').textContent = '';
+      pcRenderExList();
+      pcTLDirty = true; pcUpdatePreview();
+    };
+    // 패딩 변경도 클립 길이(총 시간)에 영향 → 미리보기 갱신
+    document.getElementById('pcPadBefore').addEventListener('change', pcUpdatePreview);
+    document.getElementById('pcPadAfter').addEventListener('change', pcUpdatePreview);
+
+    pcResetBtn.onclick = () => {
+      pcVideoInput.value = '';
+      pcStageWrap.style.display = 'none';
+      pcVideo.pause(); pcVideo.removeAttribute('src'); pcVideo.load();
+      pcSeeds = []; pcPicks = []; pcTrackFrames = new Map(); pcByFrame = new Map(); pcFramesSorted = [];
+      pcEvents = []; pcVideoW = 0; pcVideoH = 0; pcHasProxy = false;
+      if (pcProxyTimer) clearInterval(pcProxyTimer);
+      document.getElementById('pcProxyBtn').style.display = 'none';
+      document.getElementById('pcProxyBtn').disabled = false;
+      document.getElementById('pcProxyInfo').textContent = '';
+      pcJobId = null; pcLostCount = 0;
+      pcExcludes = []; pcExPending = null; pcTLDirty = true;
+      document.getElementById('pcVerifyWrap').style.display = 'none';
+      document.getElementById('pcEventWrap').style.display = 'none';
+      document.getElementById('pcEventStrip').innerHTML = '';
+      document.getElementById('pcPreview').textContent = '';
+      if (pcPollTimer) clearInterval(pcPollTimer);
+      pcLostBanner.style.display = 'none';
+      statusEl.textContent = '대기 중';
+      clipGrid.innerHTML = '';
     };
 
     function startPolling(jobId) {
@@ -1615,6 +3036,39 @@
     let editorItems = [];   // [{type:'clip'|'image', name, jobId, duration?}]
     let editorJobId  = null;
     let editorInited = false;
+    let editorJobMeta = [];  // [{job_id, label, ...}]
+
+    // ── 타임라인 자동저장 (localStorage) ──
+    const EDITOR_STATE_KEY = 'editorTimelineState';
+    let editorRestoreDone = false;   // 복원 전 빈 렌더가 저장본을 덮어쓰지 않도록 가드
+
+    function saveEditorTimeline() {
+      if (!editorRestoreDone) return;
+      try {
+        localStorage.setItem(EDITOR_STATE_KEY, JSON.stringify({
+          jobId: editorJobId,
+          items: editorItems.map(it => ({
+            type: it.type, name: it.name, jobId: it.jobId,
+            ts: it.ts || null, duration: it.duration,
+          })),
+        }));
+      } catch (e) { /* 용량초과 등은 무시 */ }
+    }
+
+    async function restoreEditorTimeline() {
+      if (editorRestoreDone) return;
+      editorRestoreDone = true;   // 이후 save 활성화 (복원할 게 없어도)
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem(EDITOR_STATE_KEY) || 'null'); } catch (e) {}
+      if (!saved || !Array.isArray(saved.items) || !saved.items.length) return;
+      editorItems = saved.items;
+      editorJobId = saved.jobId || (saved.items[0] && saved.items[0].jobId) || null;
+      if (editorJobId) {
+        await loadOverlays(editorJobId);
+        await loadBgmTracks(editorJobId);
+      }
+      renderEditorTimeline();
+    }
 
     async function initEditor() {
       const sel = document.getElementById('editorJobSelect');
@@ -1623,7 +3077,10 @@
         try {
           const res  = await fetch('/api/jobs');
           const data = await res.json();
-          (data.jobs || []).filter(j => j.status === 'done').forEach(j => {
+          const done = (data.jobs || []).filter(j => j.status === 'done');
+          editorJobMeta = done;
+          sel.innerHTML = '<option value="">(선택)</option>';
+          done.forEach(j => {
             const src = j.source_filename ? ` · ${j.source_filename}` : '';
             const dt  = j.created_at ? new Date(j.created_at * 1000).toLocaleString('ko') : '';
             const opt = document.createElement('option');
@@ -1633,24 +3090,215 @@
           });
         } catch(e) { console.error('편집기 job 목록 실패', e); }
       }
+      // 기존 Run 불러오기로 불러온 영상과 드롭다운 동기화
       if (currentJobId && !sel.value) sel.value = currentJobId;
+      // 저장된 편집 프로젝트 목록 로드
+      refreshProjectList();
+      // 이전 세션 타임라인 복원 (최초 1회)
+      await restoreEditorTimeline();
     }
 
     document.getElementById('editorLoadBtn').onclick = async () => {
-      const jobId = document.getElementById('editorJobSelect').value;
-      if (!jobId) { alert('영상을 선택하세요.'); return; }
-      editorJobId = jobId;
-      const meta     = await fetchJob(jobId);
-      const clips    = meta.clips || [];
-      const selected = meta.selected || {};
+      const selectedJobId = document.getElementById('editorJobSelect').value;
+      const jobIds = selectedJobId ? [selectedJobId] : [];
+      if (!jobIds.length) { alert('영상을 선택하세요.'); return; }
 
-      // 현재 job의 clipOrder가 있으면 그 순서를 따름
-      const ordered = (currentJobId === jobId && clipOrder.length)
-        ? clipOrder.filter(n => clips.includes(n))
-        : clips;
-      const pick = ordered.filter(n => selected[n]);
-      editorItems = (pick.length ? pick : ordered).map(n => ({type:'clip', name:n, jobId}));
+      const info = document.getElementById('editorExportInfo');
+      info.textContent = '클립 불러오는 중...';
+
+      const existing = new Set(editorItems.map(it => `${it.jobId}::${it.name}`));
+      let addedTotal = 0, skippedTotal = 0;
+
+      // 잡 선택 순서대로: 각 잡 안에서는 시간순 정렬 → 이어 붙임
+      for (const jobId of jobIds) {
+        const meta     = await fetchJob(jobId);
+        const clips    = meta.clips || [];   // 후보 그리드와 동일하게 전체 clips 로드
+        const ctMap    = meta.clip_timestamps || {};
+        // 시간순 정렬을 기본으로, 현재 job이면 clipOrder 순서를 앞에 적용.
+        // clipOrder엔 선택된 클립만 있으므로, 빠진 나머지 클립은 시간순으로 뒤에 모두 붙임.
+        const byTime = [...clips].sort((a, b) => (ctMap[a]?.start ?? Infinity) - (ctMap[b]?.start ?? Infinity));
+        let ordered = byTime;
+        if (currentJobId === jobId && clipOrder.length) {
+          const head = clipOrder.filter(n => clips.includes(n));
+          const headSet = new Set(head);
+          ordered = head.concat(byTime.filter(n => !headSet.has(n)));
+        }
+        // 선택 여부와 무관하게 폴더의 모든 클립을 불러옴 (편집기에서 직접 취사선택)
+        const toAdd = ordered
+          .map(n => ({type:'clip', name:n, jobId, ts: ctMap[n] || null}));
+
+        const newItems = toAdd.filter(it => !existing.has(`${it.jobId}::${it.name}`));
+        newItems.forEach(it => existing.add(`${it.jobId}::${it.name}`));
+        skippedTotal += (toAdd.length - newItems.length);
+        addedTotal += newItems.length;
+        editorItems = editorItems.concat(newItems);
+      }
+
+      // 첫 로드면 primary job 지정 + 오버레이/BGM 트랙 로드
+      if (!editorJobId) {
+        editorJobId = jobIds[0];
+        await loadOverlays(editorJobId);
+        await loadBgmTracks(editorJobId);
+      }
+
       renderEditorTimeline();
+
+      const msg = `${addedTotal}개 추가 (${jobIds.length}개 영상)${skippedTotal ? ` · 중복 ${skippedTotal}개 제외` : ''}`;
+      info.textContent = msg;
+      setTimeout(() => { if (info.textContent === msg) info.textContent = ''; }, 3000);
+    };
+
+    document.getElementById('editorClearBtn').onclick = () => {
+      if (!editorItems.length) return;
+      if (!confirm('타임라인을 모두 비우시겠습니까? (오버레이/BGM 트랙도 함께 제거됩니다)')) return;
+      editorItems = [];
+      editorOverlays = [];
+      editorBgmTracks = [];
+      editorJobId = null;
+      renderEditorTimeline();
+      renderOverlayTrack();
+      renderBgmTrack();
+      document.getElementById('editorExportInfo').textContent = '';
+    };
+
+    // ─────────── 편집 프로젝트 저장/불러오기 ───────────
+    const projNameInput = document.getElementById('projNameInput');
+    const projSelect = document.getElementById('projSelect');
+    const projInfo = document.getElementById('projInfo');
+
+    function projFlash(msg) {
+      projInfo.textContent = msg;
+      setTimeout(() => { if (projInfo.textContent === msg) projInfo.textContent = ''; }, 3000);
+    }
+
+    async function refreshProjectList(selectId) {
+      try {
+        const r = await fetch('/api/editor/projects');
+        const d = await r.json();
+        const prev = selectId || projSelect.value;
+        projSelect.innerHTML = '<option value="">(저장된 프로젝트 선택)</option>';
+        (d.projects || []).forEach(p => {
+          const dt = p.updated_at ? new Date(p.updated_at * 1000).toLocaleString('ko') : '';
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${p.name} · 클립${p.item_count}/오버레이${p.overlay_count} · ${dt}`;
+          projSelect.appendChild(opt);
+        });
+        if (prev) projSelect.value = prev;
+      } catch (e) { console.error('프로젝트 목록 실패', e); }
+    }
+
+    document.getElementById('projSaveBtn').onclick = async () => {
+      if (!editorItems.length) { alert('저장할 타임라인이 비어 있습니다.'); return; }
+      let name = (projNameInput.value || '').trim();
+      if (!name) { name = (prompt('프로젝트 이름을 입력하세요.', '') || '').trim(); }
+      if (!name) { alert('프로젝트 이름을 입력하세요.'); return; }
+      const payload = {
+        name,
+        job_id: editorJobId,
+        timeline: editorItems.map(it => ({
+          type: it.type, name: it.name, jobId: it.jobId,
+          ts: it.ts || null, duration: it.duration,
+        })),
+        overlays: editorOverlays,
+        bgm_tracks: editorBgmTracks,
+        transition_sec: parseFloat(editorTransitionInput.value) || 0,
+        audio_volume: parseFloat(editorAudioVolInput.value) || 1,
+      };
+      const r = await fetch('/api/editor/projects', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) { projFlash('저장 실패'); return; }
+      const d = await r.json();
+      projNameInput.value = d.name;
+      await refreshProjectList(d.id);
+      projFlash(`저장됨: ${d.name}`);
+    };
+
+    document.getElementById('projLoadBtn').onclick = async () => {
+      const id = projSelect.value;
+      if (!id) { alert('불러올 프로젝트를 선택하세요.'); return; }
+      if (editorItems.length && !confirm('현재 타임라인을 불러온 프로젝트로 교체합니다. 계속할까요?')) return;
+      const r = await fetch(`/api/editor/projects/${id}`);
+      if (!r.ok) { projFlash('불러오기 실패'); return; }
+      const p = await r.json();
+      editorItems = (p.timeline || []).map(it => ({
+        type: it.type, name: it.name, jobId: it.jobId,
+        ts: it.ts || null, duration: it.duration,   // _dur 은 비워서 재측정
+      }));
+      editorOverlays = p.overlays || [];
+      editorBgmTracks = p.bgm_tracks || [];
+      editorJobId = p.job_id || (editorItems[0] && editorItems[0].jobId) || null;
+      // 전환/중계음 설정 복원
+      if (p.transition_sec != null) {
+        editorTransitionInput.value = p.transition_sec;
+        editorTransitionLabel.textContent = `${p.transition_sec}s`;
+      }
+      if (p.audio_volume != null) {
+        editorAudioVolInput.value = p.audio_volume;
+        editorAudioVolLabel.textContent = parseFloat(p.audio_volume).toFixed(2);
+      }
+      // 오버레이/BGM 을 primary job 메타에도 반영 (export 일관성 + 재진입 복원)
+      if (editorJobId) { saveOverlays(); saveBgmTracks(); }
+      projNameInput.value = p.name || '';
+      renderEditorTimeline();   // 끝에서 computeEditorDurations→renderOverlayTrack 실행
+      pvIndex = -1; pvTime = 0;  // 미리보기 초기화
+      projFlash(`불러옴: ${p.name}`);
+    };
+
+    document.getElementById('projDeleteBtn').onclick = async () => {
+      const id = projSelect.value;
+      if (!id) { alert('삭제할 프로젝트를 선택하세요.'); return; }
+      const label = projSelect.options[projSelect.selectedIndex]?.textContent || '';
+      if (!confirm(`프로젝트를 삭제할까요?\n${label}`)) return;
+      const r = await fetch(`/api/editor/projects/${id}`, {method: 'DELETE'});
+      if (!r.ok) { projFlash('삭제 실패'); return; }
+      await refreshProjectList('');
+      projFlash('삭제됨');
+    };
+
+    document.getElementById('externalClipBtn').onclick = () => {
+      const host = editorJobId || document.getElementById('editorJobSelect')?.value || (editorJobMeta[0] && editorJobMeta[0].job_id);
+      if (!host) { alert('외부 영상을 담을 분석 영상(job)이 최소 1개 필요합니다. 먼저 영상을 분석하세요.'); return; }
+      document.getElementById('externalClipInput').click();
+    };
+
+    document.getElementById('externalClipInput').onchange = async (e) => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+      // 외부 영상을 담을 host job: 로드된 primary → 선택된 첫 job → 첫 분석 job
+      const host = editorJobId || document.getElementById('editorJobSelect')?.value || (editorJobMeta[0] && editorJobMeta[0].job_id);
+      if (!host) { alert('업로드 대상 영상(job)이 없습니다.'); e.target.value = ''; return; }
+      const info = document.getElementById('editorExportInfo');
+      let added = 0;
+      for (const file of files) {
+        info.textContent = `외부 영상 업로드 중... (${added + 1}/${files.length})`;
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch(`/api/jobs/${host}/external-clips?register=true`, {method:'POST', body:fd});
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          info.textContent = `업로드 실패 (${file.name}): ${err.detail || ''}`;
+          continue;
+        }
+        const data = await res.json();
+        editorItems.push({type:'clip', name:data.name, jobId:host, ts:null});
+        added++;
+      }
+      // 첫 추가면 primary job 지정 + 오버레이/BGM 트랙 로드 (불러오기 흐름과 동일)
+      if (!editorJobId && added) {
+        editorJobId = host;
+        await loadOverlays(editorJobId);
+        await loadBgmTracks(editorJobId);
+      }
+      renderEditorTimeline();
+      if (added) {
+        const msg = `외부 영상 ${added}개 추가`;
+        info.textContent = msg;
+        setTimeout(() => { if (info.textContent === msg) info.textContent = ''; }, 3000);
+      }
+      e.target.value = '';
     };
 
     document.getElementById('imageCardAddBtn').onclick = () => {
@@ -1673,25 +3321,22 @@
       }
       const data = await res.json();
       info.textContent = '';
-      editorItems.push({type:'image', name:data.name, jobId:editorJobId, duration:3.0});
+      editorItems.unshift({type:'image', name:data.name, jobId:editorJobId, duration:3.0});
       renderEditorTimeline();
       e.target.value = '';
     };
 
     const editorTransitionInput = document.getElementById('editorTransitionSec');
     const editorTransitionLabel = document.getElementById('editorTransitionLabel');
-    editorTransitionInput.oninput = () => { editorTransitionLabel.textContent = `${editorTransitionInput.value}s`; };
+    editorTransitionInput.oninput = () => {
+      editorTransitionLabel.textContent = `${editorTransitionInput.value}s`;
+      // 전환값이 바뀌면 컷 시작점(겹침)이 달라지므로 오버레이/BGM 트랙 다시 그림
+      renderOverlayTrack();
+    };
 
     const editorAudioVolInput = document.getElementById('editorAudioVolume');
     const editorAudioVolLabel = document.getElementById('editorAudioVolumeLabel');
     editorAudioVolInput.oninput = () => { editorAudioVolLabel.textContent = parseFloat(editorAudioVolInput.value).toFixed(2); };
-
-    const editorBgmSelect = document.getElementById('editorBgmSelect');
-    const editorBgmVolInput = document.getElementById('editorBgmVolume');
-    const editorBgmVolLabel = document.getElementById('editorBgmVolumeLabel');
-    const editorBgmVolWrap = document.getElementById('editorBgmVolWrap');
-    editorBgmSelect.onchange = () => { editorBgmVolWrap.style.display = editorBgmSelect.value ? 'flex' : 'none'; };
-    editorBgmVolInput.oninput = () => { editorBgmVolLabel.textContent = parseFloat(editorBgmVolInput.value).toFixed(2); };
 
     document.getElementById('editorExportBtn').onclick = async () => {
       if (!editorJobId || !editorItems.length) { alert('타임라인이 비어 있습니다.'); return; }
@@ -1699,15 +3344,20 @@
       info.textContent = '합치는 중... 시간이 걸릴 수 있습니다.';
       const timeline = editorItems.map(item => ({
         type: item.type, name: item.name, duration: item.duration || 3.0,
+        job_id: item.jobId,
       }));
       const transitionSec = parseFloat(editorTransitionInput.value);
       const audioVolume = parseFloat(editorAudioVolInput.value);
-      const bgmName = editorBgmSelect.value;
-      const bgmVolume = parseFloat(editorBgmVolInput.value);
       const res = await fetch(`/api/jobs/${editorJobId}/export/timeline`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({timeline, transition_sec: transitionSec, audio_volume: audioVolume, bgm_name: bgmName, bgm_volume: bgmVolume}),
+        body: JSON.stringify({
+          timeline,
+          transition_sec: transitionSec,
+          audio_volume: audioVolume,
+          bgm_tracks: editorBgmTracks,
+          overlays: editorOverlays,
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -1719,10 +3369,16 @@
     };
 
     function renderEditorTimeline() {
+      saveEditorTimeline();   // 모든 변경(추가/삭제/재정렬/컷)이 이 함수를 거치므로 여기서 자동저장
       const container = document.getElementById('editorTimeline');
       const emptyMsg  = document.getElementById('editorEmpty');
       container.innerHTML = '';
       document.getElementById('editorItemCount').textContent = `${editorItems.length}개`;
+
+      // 타임라인에 포함된 고유 job 개수 표시
+      const jobsSummary = document.getElementById('editorJobsSummary');
+      const uniqueJobs = new Set(editorItems.map(it => it.jobId).filter(Boolean));
+      jobsSummary.textContent = uniqueJobs.size > 1 ? `· ${uniqueJobs.size}개 영상에서 합침` : '';
 
       if (!editorItems.length) {
         container.appendChild(emptyMsg);
@@ -1736,7 +3392,7 @@
         el.dataset.idx = String(idx);
 
         const thumbHTML = item.type === 'clip'
-          ? `<video class="tl-thumb" src="/api/jobs/${item.jobId}/clips/${encodeURIComponent(item.name)}/file" preload="metadata" muted></video>`
+          ? `<video class="tl-thumb" src="/api/jobs/${item.jobId}/clips/${encodeURIComponent(item.name)}/file" preload="metadata" muted onloadedmetadata="this.currentTime=0.5"></video>`
           : `<img class="tl-thumb" src="/runs/${item.jobId}/image_cards/${encodeURIComponent(item.name)}" alt="${item.name}">`;
 
         const durationHTML = item.type === 'image'
@@ -1745,13 +3401,18 @@
              </div>`
           : '';
 
+        const cutBtnHTML = item.type === 'clip'
+          ? `<button class="tl-cut-btn secondary" title="컷 편집 (구간 자르기)">✂ 컷</button>`
+          : '';
+
         el.innerHTML = `
           <button class="tl-del-btn" title="제거">&#x2715;</button>
           <div class="tl-thumb-wrap">${thumbHTML}</div>
           <div class="tl-info">
             <div class="tl-type ${item.type}">${item.type === 'clip' ? '영상' : '이미지'}</div>
-            <div class="tl-name" title="${item.name}">${item.name}</div>
+            <div class="tl-name" title="${item.name}">${item.ts ? `⏱ ${fmtTime(item.ts.start)} ~ ${fmtTime(item.ts.end)}` : item.name}</div>
             ${durationHTML}
+            ${cutBtnHTML}
           </div>
         `;
 
@@ -1759,6 +3420,11 @@
           el.querySelector('.tl-duration-input').addEventListener('change', ev => {
             editorItems[idx].duration = parseFloat(ev.target.value) || 3.0;
           });
+        }
+
+        const cutBtn = el.querySelector('.tl-cut-btn');
+        if (cutBtn) {
+          cutBtn.onclick = ev => { ev.stopPropagation(); openTrimForEditor(idx); };
         }
 
         el.querySelector('.tl-del-btn').onclick = ev => {
@@ -1787,7 +3453,1027 @@
 
         container.appendChild(el);
       });
+
+      computeEditorDurations().then(renderOverlayTrack);
     }
+
+    // ─────────────────── 오버레이 / BGM 트랙 (CapCut 스타일) ───────────────────
+    let editorOverlays = [];
+    let editorBgmTracks = [];      // [{name, start_sec, duration_sec, volume, fade_in_sec, fade_out_sec}]
+    const OV_PX_PER_SEC = 10;          // 트랙 시간 비율
+    const OV_MIN_DUR = 0.5;
+    const overlaySection = document.getElementById('overlaySection');
+    const overlayTrackInner = document.getElementById('overlayTrackInner');
+    const overlayEditModal = document.getElementById('overlayEditModal');
+    const bgmSection = document.getElementById('bgmSection');
+    const bgmTrackInner = document.getElementById('bgmTrackInner');
+
+    // 클립 duration: 항상 실제 파일에서 측정 (ts는 원본 영상 좌표라 컷 편집 클립은
+    // ts.end-ts.start 와 실제 파일 길이가 약간 어긋날 수 있어 트랙 배치가 틀어짐).
+    // ts 는 ⏱ 라벨 표시용으로만 사용.
+    async function computeEditorDurations() {
+      const promises = editorItems.map((item, i) => {
+        if (item.type === 'image') {
+          item._dur = item.duration || 3.0;
+          return Promise.resolve();
+        }
+        if (item._dur) return Promise.resolve();
+        return new Promise(resolve => {
+          const v = document.createElement('video');
+          v.preload = 'metadata';
+          v.src = `/api/jobs/${item.jobId}/clips/${encodeURIComponent(item.name)}/file`;
+          v.onloadedmetadata = () => { item._dur = v.duration || 15; resolve(); };
+          v.onerror = () => {
+            // 메타데이터 로드 실패 시에만 ts 차이로 폴백
+            item._dur = (item.ts && item.ts.end > item.ts.start) ? (item.ts.end - item.ts.start) : 15;
+            resolve();
+          };
+        });
+      });
+      await Promise.all(promises);
+    }
+
+    function totalEditorDuration() {
+      return editorItems.reduce((s, it) => s + (it._dur || 0), 0);
+    }
+
+    // 백엔드 _apply_transitions 와 동일하게, 실제 적용될 크로스페이드 t(초)를 계산.
+    // - 트랜지션은 실사용 모드(XGB=1)에서만 적용
+    // - t 는 min(t, 최소클립길이/2.5) 로 클램프 (백엔드와 일치)
+    function effectiveTransition() {
+      if (!window.__useXgb) return 0;
+      let t = parseFloat(editorTransitionInput && editorTransitionInput.value);
+      if (!t || t <= 0 || editorItems.length <= 1) return 0;
+      const minDur = Math.min(...editorItems.map(it => it._dur || Infinity));
+      if (!isFinite(minDur)) return 0;
+      return Math.min(t, minDur / 2.5);
+    }
+
+    // 트랜지션 겹침을 반영한 "출력 영상" 타임라인.
+    // 백엔드: concatenate_videoclips(padding=-t) → 클립 k 시작 = Σdur[0..k-1] − k·t
+    // 반환: { starts: [클립별 시작초], total: 출력 전체 길이 } (오버레이 start_sec 좌표계와 동일)
+    function mergedTimeline() {
+      const t = effectiveTransition();
+      const starts = [];
+      let acc = 0;
+      editorItems.forEach((it, i) => {
+        starts.push(Math.max(0, acc - i * t));
+        acc += it._dur || 0;
+      });
+      const n = editorItems.length;
+      const total = Math.max(0, acc - Math.max(0, n - 1) * t);
+      return { starts, total };
+    }
+
+    function renderOverlayTrack() {
+      // 트랜지션 겹침을 반영한 출력 타임라인(컷 시작점이 실제 영상과 일치)
+      const { starts, total } = mergedTimeline();
+      const show = editorItems.length > 0;
+      overlaySection.style.display = show ? '' : 'none';
+      bgmSection.style.display = show ? '' : 'none';
+      renderBgmTrack();
+      const W = Math.max(200, total * OV_PX_PER_SEC);
+      overlayTrackInner.style.width = `${W}px`;
+      overlayTrackInner.innerHTML = '';
+
+      // 클립 경계 마커 (압축 타임라인 기준으로 빈틈없이 타일링)
+      editorItems.forEach((it, i) => {
+        const left = starts[i] * OV_PX_PER_SEC;
+        const nextStart = (i + 1 < starts.length) ? starts[i + 1] : total;
+        const marker = document.createElement('div');
+        marker.className = 'overlay-clip-marker';
+        marker.style.left = `${left}px`;
+        marker.style.width = `${Math.max(0, nextStart - starts[i]) * OV_PX_PER_SEC}px`;
+        marker.textContent = `#${i+1}`;
+        overlayTrackInner.appendChild(marker);
+      });
+
+      // 시간이 겹치는 오버레이는 세로 레인을 분리해 포개지 않게 → 드래그/리사이즈 쉽게.
+      // start 순 그리디 배치(인터벌 분할): 비어있는(이미 끝난) 레인 우선 재사용.
+      const LANE_H = 36, LANE_TOP = 14;   // × 삭제버튼(top:-8px)이 안 잘리게 여유
+      const laneEnds = [];                     // 레인별 마지막 끝(초)
+      const laneOf = new Array(editorOverlays.length);
+      editorOverlays
+        .map((ov, idx) => {
+          const s = Math.max(0, ov.start_sec || 0);
+          return { idx, s, e: s + Math.max(OV_MIN_DUR, ov.duration_sec || 3) };
+        })
+        .sort((a, b) => a.s - b.s)
+        .forEach(({ idx, s, e }) => {
+          let lane = laneEnds.findIndex(end => s >= end - 1e-3);
+          if (lane === -1) { lane = laneEnds.length; laneEnds.push(e); }
+          else laneEnds[lane] = e;
+          laneOf[idx] = lane;
+        });
+      const laneCount = Math.max(1, laneEnds.length);
+      overlayTrackInner.style.height = `${LANE_TOP * 2 + laneCount * LANE_H}px`;
+
+      // 오버레이 아이템
+      editorOverlays.forEach((ov, idx) => {
+        const el = document.createElement('div');
+        el.className = 'overlay-item' + (ov.kind === 'scorer' ? ' scorer' : '');
+        const startSec = Math.max(0, ov.start_sec || 0);
+        const durSec = Math.max(OV_MIN_DUR, ov.duration_sec || 3);
+        // 막대 끝은 영상 전체 길이를 못 넘게 클램프 → 막대 끝 = 실제로 사라지는 시점
+        const drawDur = Math.max(OV_MIN_DUR, Math.min(durSec, total - startSec));
+        el.style.left = `${startSec * OV_PX_PER_SEC}px`;
+        el.style.width = `${drawDur * OV_PX_PER_SEC}px`;
+        el.style.top = `${LANE_TOP + laneOf[idx] * LANE_H}px`;
+        el.dataset.idx = idx;
+
+        let label;
+        if (ov.image_path) {
+          label = (ov.kind === 'scoreboard' ? '🖼 점수판' : '🖼 득점자') + ` · ${ov.image_path}`;
+        } else if (ov.kind === 'scoreboard') {
+          label = `${ov.home||'홈'} ${ov.home_score??0}-${ov.away_score??0} ${ov.away||'원정'}`;
+        } else {
+          label = `⚽ ${ov.number||'-'} ${ov.name||'선수'}`;
+        }
+        el.innerHTML = `
+          <div class="ov-resize l"></div>
+          <span class="overlay-item-label">${label}</span>
+          <div class="ov-resize r"></div>
+          <button class="ov-del" title="삭제">×</button>
+        `;
+
+        // 드래그 (이동/리사이즈)
+        const onMouseDown = (e, mode) => {
+          e.preventDefault(); e.stopPropagation();
+          const startX = e.clientX;
+          const startLeft = startSec * OV_PX_PER_SEC;
+          const startWidth = durSec * OV_PX_PER_SEC;
+          let moved = false;
+          const totalPx = total * OV_PX_PER_SEC;   // 영상 전체 길이(px) = 상한
+          const onMove = (ev) => {
+            const dx = ev.clientX - startX;
+            if (Math.abs(dx) > 2) moved = true;
+            if (mode === 'move') {
+              const newLeft = Math.max(0, Math.min(startLeft + dx, totalPx - startWidth));
+              ov.start_sec = newLeft / OV_PX_PER_SEC;
+              el.style.left = `${newLeft}px`;
+            } else if (mode === 'l') {
+              const newLeft = Math.max(0, Math.min(startLeft + dx, startLeft + startWidth - OV_MIN_DUR*OV_PX_PER_SEC));
+              const newWidth = startWidth - (newLeft - startLeft);
+              ov.start_sec = newLeft / OV_PX_PER_SEC;
+              ov.duration_sec = newWidth / OV_PX_PER_SEC;
+              el.style.left = `${newLeft}px`;
+              el.style.width = `${newWidth}px`;
+            } else if (mode === 'r') {
+              const newWidth = Math.max(OV_MIN_DUR*OV_PX_PER_SEC, Math.min(startWidth + dx, totalPx - startLeft));
+              ov.duration_sec = newWidth / OV_PX_PER_SEC;
+              el.style.width = `${newWidth}px`;
+            }
+          };
+          const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            if (!moved) return;            // 단순 클릭(편집창 열기)은 건드리지 않음
+            saveOverlays();
+            renderOverlayTrack();          // 겹침 변화 반영해 레인 재배치
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        };
+        el.querySelector('.ov-resize.l').addEventListener('mousedown', e => onMouseDown(e, 'l'));
+        el.querySelector('.ov-resize.r').addEventListener('mousedown', e => onMouseDown(e, 'r'));
+        el.addEventListener('mousedown', e => {
+          if (e.target.classList.contains('ov-resize') || e.target.classList.contains('ov-del')) return;
+          onMouseDown(e, 'move');
+        });
+        // 클릭=편집(드래그 아닐 때만)
+        let clickX = 0;
+        el.addEventListener('mousedown', e => { clickX = e.clientX; });
+        el.addEventListener('click', e => {
+          if (Math.abs(e.clientX - clickX) > 3) return;
+          if (e.target.classList.contains('ov-del') || e.target.classList.contains('ov-resize')) return;
+          openOverlayEditor(idx);
+        });
+        el.querySelector('.ov-del').addEventListener('click', e => {
+          e.stopPropagation();
+          editorOverlays.splice(idx, 1);
+          renderOverlayTrack();
+          saveOverlays();
+        });
+
+        overlayTrackInner.appendChild(el);
+      });
+
+      // 재생 위치 표시선
+      const oph = document.createElement('div');
+      oph.className = 'ov-playhead'; oph.id = 'ovPlayhead';
+      overlayTrackInner.appendChild(oph);
+
+      pvSyncToTimeline();   // 미리보기 동기화 (영역 표시·오버레이 레이어·플레이헤드)
+    }
+
+    // 새 오버레이 시작 위치: 같은 종류의 마지막 오버레이 끝 뒤에 배치(시간 겹침 방지).
+    // 다른 종류(점수판↔득점자)는 동시 표시 가능하므로 종류별로만 따짐.
+    function nextOverlayStart(kind, dur, total) {
+      const sameKind = editorOverlays.filter(o => o.kind === kind);
+      if (!sameKind.length) return 0;
+      const lastEnd = Math.max(...sameKind.map(o => (o.start_sec || 0) + (o.duration_sec || 0)));
+      return Math.max(0, Math.min(lastEnd, total - dur));
+    }
+
+    function addOverlayFromTemplate(kind) {
+      const total = totalEditorDuration() || 10;
+      // 이미지 변형(scoreboard-image / scorer-image): 즉시 파일 선택 → 업로드 후 오버레이 생성
+      if (kind === 'scoreboard-image' || kind === 'scorer-image') {
+        const realKind = kind === 'scoreboard-image' ? 'scoreboard' : 'scorer';
+        const input = document.getElementById('overlayImageInput');
+        input.onchange = async (ev) => {
+          input.onchange = null;
+          const file = ev.target.files[0];
+          if (!file) { input.value = ''; return; }
+          if (!editorJobId) { alert('먼저 클립을 불러오세요.'); input.value = ''; return; }
+          const info = document.getElementById('editorExportInfo');
+          info.textContent = '오버레이 이미지 업로드 중...';
+          const fd = new FormData();
+          fd.append('file', file);
+          const r = await fetch(`/api/jobs/${editorJobId}/overlay-images`, {method:'POST', body:fd});
+          input.value = '';
+          if (!r.ok) { info.textContent = '이미지 업로드 실패'; return; }
+          const d = await r.json();
+          info.textContent = '';
+          const dur = realKind === 'scoreboard' ? Math.min(8, total) : Math.min(4, total);
+          const start = nextOverlayStart(realKind, dur, total);
+          const defaults = realKind === 'scoreboard'
+            ? { kind:'scoreboard', enabled:true, image_path:d.name, image_job_id:editorJobId,
+                width_pct:35, height_pct:0, x_pct:5, y_pct:5,
+                start_sec:start, duration_sec:dur }
+            : { kind:'scorer', enabled:true, image_path:d.name, image_job_id:editorJobId,
+                width_pct:30, height_pct:0, x_pct:5, y_pct:75,
+                start_sec:start, duration_sec:dur };
+          editorOverlays.push(defaults);
+          renderOverlayTrack();
+          saveOverlays();
+          openOverlayEditor(editorOverlays.length - 1);
+        };
+        input.click();
+        return;
+      }
+      const dur = kind === 'scoreboard' ? Math.min(8, total) : Math.min(4, total);
+      const start = nextOverlayStart(kind, dur, total);
+      const defaults = kind === 'scoreboard'
+        ? { kind:'scoreboard', enabled:true, home:'홈팀', home_score:0, away:'원정', away_score:0,
+            bg_color:'#FF7400', x_pct:35, y_pct:5, scale:1.0, start_sec:start, duration_sec:dur }
+        : { kind:'scorer', enabled:true, number:'10', name:'선수명',
+            bg_color:'#FF7400', x_pct:5, y_pct:80, scale:1.0, start_sec:start, duration_sec:dur };
+      editorOverlays.push(defaults);
+      renderOverlayTrack();
+      saveOverlays();
+      openOverlayEditor(editorOverlays.length - 1);
+    }
+
+    document.querySelectorAll('.overlay-tpl-btn').forEach(btn => {
+      btn.addEventListener('click', () => addOverlayFromTemplate(btn.dataset.tpl));
+    });
+
+    // ─── 편집 팝업 ───
+    let editingOverlayIdx = -1;
+    const ovPreviewBox = document.getElementById('ovPreviewBox');
+    const ovEditForm = document.getElementById('ovEditForm');
+    const ovEditTitle = document.getElementById('overlayEditTitle');
+    const overlayEditPreview = document.getElementById('overlayEditPreview');
+
+    // 미리보기 컨테이너 비율을 실제 영상 비율과 맞춤 (오버레이 위치/크기 정확도).
+    // 첫 클립의 실제 해상도를 읽어 aspect-ratio 적용. 실패 시 16:9 유지.
+    let editorVideoAspect = 16 / 9;
+    async function measureEditorVideoAspect() {
+      const clip = editorItems.find(it => it.type === 'clip');
+      if (!clip) return editorVideoAspect;
+      await new Promise(resolve => {
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.src = `/api/jobs/${clip.jobId}/clips/${encodeURIComponent(clip.name)}/file`;
+        v.onloadedmetadata = () => {
+          if (v.videoWidth && v.videoHeight) editorVideoAspect = v.videoWidth / v.videoHeight;
+          resolve();
+        };
+        v.onerror = () => resolve();
+      });
+      return editorVideoAspect;
+    }
+
+    function buildOvForm(ov) {
+      const _esc = s => String(s||'').replace(/"/g,'&quot;');
+      // X/Y 좌표 직접 입력 (영상 폭/높이 대비 %). 드래그와 양방향 동기화.
+      const posRow = `
+        <div class="ov-edit-row">
+          <label>X 좌표 (% 가로)
+            <input type="number" class="ov-input w-sm" data-k="x_pct" value="${Math.round(ov.x_pct??0)}" min="0" max="100" step="1">
+          </label>
+          <label>Y 좌표 (% 세로)
+            <input type="number" class="ov-input w-sm" data-k="y_pct" value="${Math.round(ov.y_pct??0)}" min="0" max="100" step="1">
+          </label>
+        </div>`;
+      // ── 이미지 모드 ──
+      if (ov.image_path) {
+        return `
+          <div class="ov-edit-row">
+            <span style="color:#ff8a1d;font-weight:700;">🖼 이미지 모드</span>
+            <span style="color:#8a7c70;">${_esc(ov.image_path)}</span>
+          </div>
+          <div class="ov-edit-row">
+            <label>가로 (% 영상폭)
+              <input type="number" class="ov-input w-sm" data-k="width_pct" value="${ov.width_pct??30}" min="5" max="100" step="1">
+            </label>
+            <label>세로 (% 영상높이, 0=비율유지)
+              <input type="number" class="ov-input w-sm" data-k="height_pct" value="${ov.height_pct??0}" min="0" max="100" step="1">
+            </label>
+            <button type="button" class="secondary" id="ovReplaceImageBtn">사진 교체</button>
+          </div>
+          ${posRow}
+          <div class="muted" style="font-size:11px;">프리뷰 박스 드래그=위치, 모서리 핸들=크기 조절 · X/Y 좌표 직접 입력 가능</div>
+          <!--
+          ── 향후 확장: 이미지 템플릿 + 텍스트 편집 모드 ──
+          템플릿 이미지 위에 점수/팀명/등번호/선수명을 직접 그리기.
+          텍스트별 앵커 (ov.text_anchors)를 지정하고 폰트/크기/색상을 편집.
+
+          ${ov.kind === 'scoreboard' ? `
+            <div class="ov-edit-row">
+              <label>홈팀 <input class="ov-input w-md" data-k="home" value="${_esc(ov.home)}"></label>
+              <label>점수 <input type="number" class="ov-input w-sm" data-k="home_score" value="${ov.home_score??0}" min="0"></label>
+              <span>-</span>
+              <label><input type="number" class="ov-input w-sm" data-k="away_score" value="${ov.away_score??0}" min="0"></label>
+              <label>원정 <input class="ov-input w-md" data-k="away" value="${_esc(ov.away)}"></label>
+            </div>` : `
+            <div class="ov-edit-row">
+              <label>등번호 <input class="ov-input w-sm" data-k="number" value="${_esc(ov.number)}"></label>
+              <label>선수 이름 <input class="ov-input w-md" data-k="name" value="${_esc(ov.name)}"></label>
+            </div>`}
+          -->
+        `;
+      }
+      // ── 그리기 모드 (기존) ──
+      const color = ov.bg_color || '#FF7400';
+      const colorRow = `
+        <div class="ov-edit-row">
+          <label>배경색 <input type="color" class="ov-input" style="width:46px; padding:0; height:30px; cursor:pointer;" data-k="bg_color" value="${_esc(color)}"></label>
+          <input class="ov-input w-md" data-k="bg_color" value="${_esc(color)}" maxlength="7" placeholder="#FF7400">
+        </div>`;
+      const scaleRow = `
+        <div class="ov-edit-row">
+          <label>크기 배율
+            <input type="number" class="ov-input w-sm" data-k="scale" value="${ov.scale??1}" min="0.3" max="4" step="0.05">
+          </label>
+          <span class="muted" style="font-size:11px;">또는 미리보기 우하단 핸들 드래그</span>
+        </div>`;
+      if (ov.kind === 'scoreboard') {
+        return `
+          <div class="ov-edit-row">
+            <label>홈팀 <input class="ov-input w-md" data-k="home" value="${_esc(ov.home)}"></label>
+            <label>점수 <input type="number" class="ov-input w-sm" data-k="home_score" value="${ov.home_score??0}" min="0"></label>
+            <span>-</span>
+            <label><input type="number" class="ov-input w-sm" data-k="away_score" value="${ov.away_score??0}" min="0"></label>
+            <label>원정 <input class="ov-input w-md" data-k="away" value="${_esc(ov.away)}"></label>
+          </div>
+          ${colorRow}${scaleRow}${posRow}`;
+      } else {
+        return `
+          <div class="ov-edit-row">
+            <label>등번호 <input class="ov-input w-sm" data-k="number" value="${_esc(ov.number)}"></label>
+            <label>선수 이름 <input class="ov-input w-md" data-k="name" value="${_esc(ov.name)}"></label>
+          </div>
+          ${colorRow}${scaleRow}${posRow}`;
+      }
+    }
+
+    function hexToRgba(hex, alpha) {
+      const s = String(hex||'#FF7400').replace('#','');
+      if (s.length !== 6) return `rgba(255,116,0,${alpha})`;
+      const r = parseInt(s.slice(0,2),16), g = parseInt(s.slice(2,4),16), b = parseInt(s.slice(4,6),16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    const LOGO_URL = '/static/overlay_logo.png';
+    const logoSlot = `<span class="ov-pb-logo"><img src="${LOGO_URL}" onerror="this.parentElement.style.display='none'"></span>`;
+
+    // 오버레이 1개의 내부 마크업(이미지/그리기 공통). 편집 미리보기·라이브 미리보기에서 재사용.
+    function overlayBoxMarkup(ov) {
+      if (ov.image_path) {
+        const imgUrl = `/runs/${ov.image_job_id || editorJobId}/overlay_images/${encodeURIComponent(ov.image_path)}`;
+        return `<img src="${imgUrl}" alt="overlay">`;
+      }
+      const bg = hexToRgba(ov.bg_color || '#FF7400', 0.5);
+      const sc = ov.scale || 1;
+      const scStyle = sc !== 1 ? `transform:scale(${sc});transform-origin:top left;` : '';
+      if (ov.kind === 'scoreboard') {
+        return `${logoSlot}
+          <span class="ov-pb-rect" style="background:${bg};${scStyle}">
+            <span class="ov-pb-home">${escHtml(ov.home || '홈팀')}</span>
+            <span class="ov-pb-score">${ov.home_score??0} - ${ov.away_score??0}</span>
+            <span class="ov-pb-away">${escHtml(ov.away || '원정')}</span>
+          </span>`;
+      }
+      return `${logoSlot}
+        <span class="ov-pb-rect" style="background:${bg};${scStyle}">
+          <span class="ov-pb-num">${escHtml(ov.number || '10')}</span>
+          <span class="ov-pb-text">
+            <span class="ov-pb-label">⚽ GOAL!</span>
+            <span class="ov-pb-name">${escHtml(ov.name || '선수')}</span>
+          </span>
+        </span>`;
+    }
+
+    function updatePreviewBox(ov) {
+      // ── 이미지 모드 ──
+      if (ov.image_path) {
+        ovPreviewBox.className = 'ov-preview-box image-mode ' + ov.kind;
+        ovPreviewBox.style.background = 'transparent';
+        // 가로/세로 % → 컨테이너 픽셀 width/height
+        ovPreviewBox.innerHTML = overlayBoxMarkup(ov) + `
+          <div class="ov-resize-handle nw" data-corner="nw"></div>
+          <div class="ov-resize-handle ne" data-corner="ne"></div>
+          <div class="ov-resize-handle sw" data-corner="sw"></div>
+          <div class="ov-resize-handle se" data-corner="se"></div>
+        `;
+        ovPreviewBox.style.left = `${ov.x_pct}%`;
+        ovPreviewBox.style.top = `${ov.y_pct}%`;
+        ovPreviewBox.style.width = `${Math.max(5, ov.width_pct||30)}%`;
+        if (ov.height_pct && ov.height_pct > 0) {
+          ovPreviewBox.style.height = `${ov.height_pct}%`;
+        } else {
+          ovPreviewBox.style.height = 'auto';
+          // 이미지 비율 유지 위해 width만 지정, 이미지 로드 후 실제 비율로 height_pct 갱신은 export 시 자동 계산
+        }
+        return;
+      }
+      // ── 그리기 모드 (기존) ──
+      ovPreviewBox.className = 'ov-preview-box ' + ov.kind;
+      ovPreviewBox.style.background = 'transparent';
+      ovPreviewBox.style.width = '';
+      ovPreviewBox.style.height = '';
+      ovPreviewBox.innerHTML = overlayBoxMarkup(ov) +
+        `<div class="ov-resize-handle se" data-corner="se" title="드래그로 크기 조절"></div>`;
+      ovPreviewBox.style.left = `${ov.x_pct}%`;
+      ovPreviewBox.style.top = `${ov.y_pct}%`;
+    }
+
+    function escHtml(s) {
+      return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function openOverlayEditor(idx) {
+      editingOverlayIdx = idx;
+      const ov = editorOverlays[idx];
+      if (!ov) return;
+      const isImage = !!ov.image_path;
+      const kindLabel = ov.kind === 'scoreboard' ? '점수판' : '득점자';
+      ovEditTitle.textContent = `${kindLabel} 편집${isImage ? ' (이미지)' : ''}`;
+      ovEditForm.innerHTML = buildOvForm(ov);
+      updatePreviewBox(ov);
+      // 미리보기 영역을 실제 영상 비율로 맞춰 위치/크기가 export와 일치하게 함
+      measureEditorVideoAspect().then(a => { overlayEditPreview.style.aspectRatio = String(a); });
+      ovEditForm.querySelectorAll('[data-k]').forEach(inp => {
+        inp.addEventListener('input', () => {
+          const k = inp.dataset.k;
+          ov[k] = inp.type === 'number' ? (parseFloat(inp.value)||0) : inp.value;
+          // bg_color 동기화: color picker ↔ hex text input
+          if (k === 'bg_color') {
+            ovEditForm.querySelectorAll('[data-k="bg_color"]').forEach(o => {
+              if (o !== inp) o.value = inp.value;
+            });
+          }
+          updatePreviewBox(ov);
+        });
+      });
+      // 이미지 교체 버튼
+      const replaceBtn = document.getElementById('ovReplaceImageBtn');
+      if (replaceBtn) {
+        replaceBtn.onclick = () => {
+          const input = document.getElementById('overlayImageInput');
+          input.onchange = async (ev) => {
+            input.onchange = null;
+            const file = ev.target.files[0];
+            if (!file) { input.value=''; return; }
+            const fd = new FormData();
+            fd.append('file', file);
+            const r = await fetch(`/api/jobs/${editorJobId}/overlay-images`, {method:'POST', body:fd});
+            input.value = '';
+            if (!r.ok) { alert('이미지 업로드 실패'); return; }
+            const d = await r.json();
+            ov.image_path = d.name;
+            ov.image_job_id = editorJobId;
+            updatePreviewBox(ov);
+            ovEditForm.innerHTML = buildOvForm(ov);
+            saveOverlays();
+            // 폼 재바인딩
+            openOverlayEditor(idx);
+          };
+          input.click();
+        };
+      }
+      overlayEditModal.classList.add('active');
+    }
+
+    // 위치 드래그 + 리사이즈 (이미지: 모서리 w/h, 그리기: SE → scale)
+    (function initPreviewDrag() {
+      let mode = null;    // 'move' | 'nw' | 'ne' | 'sw' | 'se'
+      let startX = 0, startY = 0;
+      let startXPct = 0, startYPct = 0, startWPct = 0, startHPct = 0;
+      let startScale = 1, startPixelW = 0;
+      ovPreviewBox.addEventListener('mousedown', e => {
+        if (editingOverlayIdx < 0) return;
+        const ov = editorOverlays[editingOverlayIdx];
+        const corner = e.target.classList.contains('ov-resize-handle')
+          ? e.target.dataset.corner : null;
+        mode = corner || 'move';
+        startX = e.clientX; startY = e.clientY;
+        startXPct = ov.x_pct; startYPct = ov.y_pct;
+        startWPct = ov.width_pct || 30;
+        // 비이미지 SE 리사이즈용 초기값
+        if (corner && !ov.image_path) {
+          startScale = ov.scale || 1;
+          startPixelW = ovPreviewBox.getBoundingClientRect().width;
+        }
+        // height_pct 계산: 미지정 시 현재 박스 픽셀 높이 → % 환산
+        if (ov.height_pct && ov.height_pct > 0) {
+          startHPct = ov.height_pct;
+        } else {
+          const rect = document.getElementById('overlayEditPreview').getBoundingClientRect();
+          const boxRect = ovPreviewBox.getBoundingClientRect();
+          startHPct = rect.height > 0 ? (boxRect.height / rect.height) * 100 : 20;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      document.addEventListener('mousemove', e => {
+        if (!mode || editingOverlayIdx < 0) return;
+        const ov = editorOverlays[editingOverlayIdx];
+        const rect = document.getElementById('overlayEditPreview').getBoundingClientRect();
+        const dxPct = ((e.clientX - startX) / rect.width) * 100;
+        const dyPct = ((e.clientY - startY) / rect.height) * 100;
+
+        if (mode === 'move') {
+          ov.x_pct = Math.max(0, Math.min(95, startXPct + dxPct));
+          ov.y_pct = Math.max(0, Math.min(92, startYPct + dyPct));
+        } else if (ov.image_path) {
+          // 이미지 모서리 리사이즈
+          let newX = startXPct, newY = startYPct;
+          let newW = startWPct, newH = startHPct;
+          if (mode === 'se') {
+            newW = Math.max(5, Math.min(100 - startXPct, startWPct + dxPct));
+            newH = Math.max(3, Math.min(100 - startYPct, startHPct + dyPct));
+          } else if (mode === 'ne') {
+            newW = Math.max(5, Math.min(100 - startXPct, startWPct + dxPct));
+            newH = Math.max(3, startHPct - dyPct);
+            newY = Math.max(0, Math.min(startYPct + startHPct - 3, startYPct + dyPct));
+          } else if (mode === 'sw') {
+            newW = Math.max(5, startWPct - dxPct);
+            newH = Math.max(3, Math.min(100 - startYPct, startHPct + dyPct));
+            newX = Math.max(0, Math.min(startXPct + startWPct - 5, startXPct + dxPct));
+          } else if (mode === 'nw') {
+            newW = Math.max(5, startWPct - dxPct);
+            newH = Math.max(3, startHPct - dyPct);
+            newX = Math.max(0, Math.min(startXPct + startWPct - 5, startXPct + dxPct));
+            newY = Math.max(0, Math.min(startYPct + startHPct - 3, startYPct + dyPct));
+          }
+          ov.x_pct = newX; ov.y_pct = newY;
+          ov.width_pct = newW; ov.height_pct = newH;
+          const wInp = ovEditForm.querySelector('[data-k="width_pct"]');
+          const hInp = ovEditForm.querySelector('[data-k="height_pct"]');
+          if (wInp) wInp.value = Math.round(newW);
+          if (hInp) hInp.value = Math.round(newH);
+        } else {
+          // 그리기 모드 SE → scale 조절
+          const currentW = startPixelW + (e.clientX - startX);
+          const newScale = Math.max(0.3, Math.min(4.0,
+            startScale * Math.max(0.05, currentW / Math.max(1, startPixelW))));
+          ov.scale = Math.round(newScale * 100) / 100;
+          const scaleInp = ovEditForm.querySelector('[data-k="scale"]');
+          if (scaleInp) scaleInp.value = ov.scale;
+        }
+        // X/Y 좌표 입력 필드도 드래그에 맞춰 갱신 (양방향 동기화)
+        const xInp = ovEditForm.querySelector('[data-k="x_pct"]');
+        const yInp = ovEditForm.querySelector('[data-k="y_pct"]');
+        if (xInp) xInp.value = Math.round(ov.x_pct);
+        if (yInp) yInp.value = Math.round(ov.y_pct);
+        updatePreviewBox(ov);
+      });
+      document.addEventListener('mouseup', () => { mode = null; });
+    })();
+
+    document.getElementById('closeOverlayEdit').onclick = () => {
+      overlayEditModal.classList.remove('active');
+      editingOverlayIdx = -1;
+    };
+    document.getElementById('ovApplyBtn').onclick = () => {
+      overlayEditModal.classList.remove('active');
+      editingOverlayIdx = -1;
+      renderOverlayTrack();
+      saveOverlays();
+    };
+    document.getElementById('ovDeleteBtn').onclick = () => {
+      if (editingOverlayIdx < 0) return;
+      editorOverlays.splice(editingOverlayIdx, 1);
+      overlayEditModal.classList.remove('active');
+      editingOverlayIdx = -1;
+      renderOverlayTrack();
+      saveOverlays();
+    };
+
+    async function saveOverlays() {
+      if (!editorJobId) return;
+      try {
+        await fetch(`/api/jobs/${editorJobId}/overlays`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ overlays: editorOverlays }),
+        });
+      } catch (e) { console.error('오버레이 저장 실패', e); }
+    }
+
+    async function loadOverlays(jobId) {
+      try {
+        const r = await fetch(`/api/jobs/${jobId}/overlays`);
+        const d = await r.json();
+        editorOverlays = d.overlays || [];
+      } catch (e) { editorOverlays = []; }
+    }
+
+    // ─────────────────── BGM 트랙 ───────────────────
+    async function saveBgmTracks() {
+      if (!editorJobId) return;
+      try {
+        await fetch(`/api/jobs/${editorJobId}/bgm-tracks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bgm_tracks: editorBgmTracks }),
+        });
+      } catch (e) { console.error('BGM 트랙 저장 실패', e); }
+    }
+
+    async function loadBgmTracks(jobId) {
+      try {
+        const r = await fetch(`/api/jobs/${jobId}/bgm-tracks`);
+        const d = await r.json();
+        editorBgmTracks = d.bgm_tracks || [];
+      } catch (e) { editorBgmTracks = []; }
+    }
+
+    function renderBgmTrack() {
+      const { total } = mergedTimeline();   // 트랜지션 겹침 반영한 출력 길이
+      const W = Math.max(200, total * OV_PX_PER_SEC);
+      bgmTrackInner.style.width = `${W}px`;
+      bgmTrackInner.innerHTML = '';
+
+      editorBgmTracks.forEach((bg, idx) => {
+        const el = document.createElement('div');
+        el.className = 'bgm-item';
+        const startSec = Math.max(0, bg.start_sec || 0);
+        const durSec = Math.max(OV_MIN_DUR, bg.duration_sec || 5);
+        el.style.left = `${startSec * OV_PX_PER_SEC}px`;
+        el.style.width = `${durSec * OV_PX_PER_SEC}px`;
+        const fin = bg.fade_in_sec || 0, fout = bg.fade_out_sec || 0;
+        const fadeMark = (fin || fout) ? ` ↗${fin}s ↘${fout}s` : '';
+        const label = `🎵 ${bg.name.replace(/\.[^.]+$/,'')} · vol ${(bg.volume??0.3).toFixed(2)}${fadeMark}`;
+        el.innerHTML = `
+          <div class="ov-resize l"></div>
+          <span class="overlay-item-label">${escHtml(label)}</span>
+          <div class="ov-resize r"></div>
+          <button class="ov-del" title="삭제">×</button>
+        `;
+
+        const onMouseDown = (e, m) => {
+          e.preventDefault(); e.stopPropagation();
+          const startX = e.clientX;
+          const startLeft = startSec * OV_PX_PER_SEC;
+          const startWidth = durSec * OV_PX_PER_SEC;
+          const totalPx = total * OV_PX_PER_SEC;   // 영상 전체 길이(px) = 상한
+          const onMove = (ev) => {
+            const dx = ev.clientX - startX;
+            if (m === 'move') {
+              const newLeft = Math.max(0, Math.min(startLeft + dx, totalPx - startWidth));
+              bg.start_sec = newLeft / OV_PX_PER_SEC;
+              el.style.left = `${newLeft}px`;
+            } else if (m === 'l') {
+              const newLeft = Math.max(0, Math.min(startLeft + dx, startLeft + startWidth - OV_MIN_DUR*OV_PX_PER_SEC));
+              const newWidth = startWidth - (newLeft - startLeft);
+              bg.start_sec = newLeft / OV_PX_PER_SEC;
+              bg.duration_sec = newWidth / OV_PX_PER_SEC;
+              el.style.left = `${newLeft}px`;
+              el.style.width = `${newWidth}px`;
+            } else if (m === 'r') {
+              const newWidth = Math.max(OV_MIN_DUR*OV_PX_PER_SEC, Math.min(startWidth + dx, totalPx - startLeft));
+              bg.duration_sec = newWidth / OV_PX_PER_SEC;
+              el.style.width = `${newWidth}px`;
+            }
+          };
+          const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            saveBgmTracks();
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        };
+        el.querySelector('.ov-resize.l').addEventListener('mousedown', e => onMouseDown(e, 'l'));
+        el.querySelector('.ov-resize.r').addEventListener('mousedown', e => onMouseDown(e, 'r'));
+        el.addEventListener('mousedown', e => {
+          if (e.target.classList.contains('ov-resize') || e.target.classList.contains('ov-del')) return;
+          onMouseDown(e, 'move');
+        });
+        // 클릭=편집
+        let clickX = 0;
+        el.addEventListener('mousedown', e => { clickX = e.clientX; });
+        el.addEventListener('click', e => {
+          if (Math.abs(e.clientX - clickX) > 3) return;
+          if (e.target.classList.contains('ov-del') || e.target.classList.contains('ov-resize')) return;
+          openBgmEditor(idx);
+        });
+        el.querySelector('.ov-del').addEventListener('click', e => {
+          e.stopPropagation();
+          editorBgmTracks.splice(idx, 1);
+          renderBgmTrack();
+          saveBgmTracks();
+        });
+
+        bgmTrackInner.appendChild(el);
+      });
+
+      const bph = document.createElement('div');
+      bph.className = 'ov-playhead'; bph.id = 'bgmPlayhead';
+      bgmTrackInner.appendChild(bph);
+    }
+
+    function openBgmEditor(idx) {
+      const bg = editorBgmTracks[idx];
+      if (!bg) return;
+      const tracks = window.__bgmTracks || [];
+      const fileOptions = tracks.map(n =>
+        `<option value="${escHtml(n)}" ${n===bg.name?'selected':''}>${escHtml(n.replace(/\.[^.]+$/,''))}</option>`
+      ).join('');
+      const dlg = document.createElement('div');
+      dlg.className = 'modal active';
+      dlg.innerHTML = `
+        <div class="modal-content" style="max-width:520px;">
+          <div class="modal-header">
+            <h2>BGM 편집</h2>
+            <button class="secondary" id="bgmEditClose">닫기</button>
+          </div>
+          <div class="ov-edit-form">
+            <div class="ov-edit-row">
+              <label>파일 <select class="ov-input w-lg" id="bgmEditName">${fileOptions}</select></label>
+            </div>
+            <div class="ov-edit-row">
+              <label>볼륨 <input type="number" class="ov-input w-sm" id="bgmEditVol" value="${bg.volume??0.3}" min="0" max="1.5" step="0.05"></label>
+              <label>페이드인 (s) <input type="number" class="ov-input w-sm" id="bgmEditFin" value="${bg.fade_in_sec??1}" min="0" max="10" step="0.1"></label>
+              <label>페이드아웃 (s) <input type="number" class="ov-input w-sm" id="bgmEditFout" value="${bg.fade_out_sec??1}" min="0" max="10" step="0.1"></label>
+            </div>
+            <div class="ov-edit-row">
+              <label>시작 (s) <input type="number" class="ov-input w-sm" id="bgmEditStart" value="${(bg.start_sec??0).toFixed(1)}" min="0" step="0.1"></label>
+              <label>길이 (s) <input type="number" class="ov-input w-sm" id="bgmEditDur" value="${(bg.duration_sec??10).toFixed(1)}" min="0.5" step="0.1"></label>
+            </div>
+          </div>
+          <div class="row" style="justify-content:flex-end; gap:8px; margin-top:10px;">
+            <button class="secondary" id="bgmEditDel" style="background:rgba(198,40,40,0.15); border-color:rgba(198,40,40,0.4); color:#ff6e6e;">삭제</button>
+            <button id="bgmEditApply">저장</button>
+          </div>
+        </div>`;
+      document.body.appendChild(dlg);
+      const close = () => dlg.remove();
+      dlg.querySelector('#bgmEditClose').onclick = close;
+      dlg.querySelector('#bgmEditDel').onclick = () => {
+        editorBgmTracks.splice(idx, 1);
+        renderBgmTrack();
+        saveBgmTracks();
+        close();
+      };
+      dlg.querySelector('#bgmEditApply').onclick = () => {
+        const total = mergedTimeline().total || 0;   // 트랜지션 겹침 반영한 실제 출력 길이
+        bg.name = dlg.querySelector('#bgmEditName').value;
+        bg.volume = parseFloat(dlg.querySelector('#bgmEditVol').value)||0.3;
+        bg.fade_in_sec = parseFloat(dlg.querySelector('#bgmEditFin').value)||0;
+        bg.fade_out_sec = parseFloat(dlg.querySelector('#bgmEditFout').value)||0;
+        // 영상 전체 길이를 넘지 못하게 시작·길이를 클램프
+        const start = Math.max(0, Math.min(parseFloat(dlg.querySelector('#bgmEditStart').value)||0, Math.max(0, total - 0.5)));
+        const dur = Math.max(0.5, parseFloat(dlg.querySelector('#bgmEditDur').value)||10);
+        bg.start_sec = start;
+        bg.duration_sec = total > 0 ? Math.min(dur, total - start) : dur;
+        renderBgmTrack();
+        saveBgmTracks();
+        close();
+      };
+    }
+
+    document.getElementById('bgmAddBtn').addEventListener('click', () => {
+      const tracks = window.__bgmTracks || [];
+      if (!tracks.length) { alert('업로드된 BGM 파일이 없습니다. 먼저 + 파일 업로드 버튼으로 파일을 추가하세요.'); return; }
+      if (!editorJobId) { alert('먼저 클립을 불러오세요.'); return; }
+      const total = totalEditorDuration() || 10;
+      editorBgmTracks.push({
+        name: tracks[0],
+        start_sec: 0,
+        duration_sec: Math.min(20, total),
+        volume: 0.3,
+        fade_in_sec: 1.0,
+        fade_out_sec: 1.5,
+      });
+      renderBgmTrack();
+      saveBgmTracks();
+      openBgmEditor(editorBgmTracks.length - 1);
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 미리보기: 클립을 압축 타임라인(전환 겹침 반영) 순서대로 재생하며
+    // 오버레이가 편집한 시점에 정확히 등장/소멸하는지 확인.
+    // BGM은 미포함(클립 원본 소리만), 전환은 컷으로 처리(디졸브 미표시).
+    // ─────────────────────────────────────────────────────────────
+    let pvPlaying = false, pvIndex = -1, pvRAF = null, pvLastTs = 0;
+    let pvTime = 0, pvScrubbing = false, pvLoading = false;
+    let pvOverlayBoxes = [];
+
+    const pvVideo = document.getElementById('pvVideo');
+    const pvImage = document.getElementById('pvImage');
+    const pvPlayBtn = document.getElementById('pvPlayBtn');
+    const pvScrub = document.getElementById('pvScrub');
+    const pvTimeLabel = document.getElementById('pvTimeLabel');
+
+    function pvItemSpan(idx, tl) {
+      const next = (idx + 1 < tl.starts.length) ? tl.starts[idx + 1] : tl.total;
+      return Math.max(0.05, next - tl.starts[idx]);
+    }
+    function pvIndexForTime(t, tl) {
+      for (let i = tl.starts.length - 1; i >= 0; i--) {
+        if (t >= tl.starts[i] - 1e-6) return i;
+      }
+      return 0;
+    }
+
+    function pvLoadItem(idx, localT, tl, play) {
+      if (idx < 0 || idx >= editorItems.length) return;
+      pvIndex = idx;
+      const item = editorItems[idx];
+      const span = pvItemSpan(idx, tl);
+      localT = Math.max(0, Math.min(localT, span));
+      if (item.type === 'clip') {
+        pvImage.style.display = 'none';
+        pvVideo.style.display = '';
+        const vol = parseFloat(editorAudioVolInput && editorAudioVolInput.value);
+        pvVideo.volume = isFinite(vol) ? Math.max(0, Math.min(vol, 1)) : 1;
+        const url = `/api/jobs/${item.jobId}/clips/${encodeURIComponent(item.name)}/file`;
+        const apply = () => {
+          pvLoading = false;
+          try { pvVideo.currentTime = localT; } catch (e) {}
+          if (play) pvVideo.play().catch(() => {}); else pvVideo.pause();
+        };
+        if (pvVideo.dataset.src !== url) {
+          pvLoading = true;
+          pvVideo.dataset.src = url;
+          pvVideo.src = url;
+          pvVideo.onloadedmetadata = apply;
+        } else {
+          apply();
+        }
+      } else {  // 이미지 카드
+        pvVideo.pause();
+        pvVideo.style.display = 'none';
+        pvImage.style.display = '';
+        const url = `/runs/${item.jobId}/image_cards/${encodeURIComponent(item.name)}`;
+        if (pvImage.dataset.src !== url) { pvImage.dataset.src = url; pvImage.src = url; }
+      }
+      pvLastTs = performance.now();
+    }
+
+    function pvAdvance(tl) {
+      const next = pvIndex + 1;
+      if (next < editorItems.length) {
+        pvLoadItem(next, 0, tl, true);
+        pvTime = tl.starts[next];
+      } else {
+        pvTime = tl.total;
+        pvPause();
+      }
+    }
+
+    function pvTick() {
+      if (!pvPlaying) return;
+      const tl = mergedTimeline();
+      const item = editorItems[pvIndex];
+      if (!item) { pvPause(); return; }
+      const span = pvItemSpan(pvIndex, tl);
+      const now = performance.now();
+      if (item.type === 'clip') {
+        if (!pvLoading) {
+          pvTime = tl.starts[pvIndex] + Math.min(pvVideo.currentTime, span);
+          if (pvVideo.currentTime >= span - 0.03 || pvVideo.ended) pvAdvance(tl);
+        }
+      } else {
+        pvTime += (now - pvLastTs) / 1000;
+        if (pvTime >= tl.starts[pvIndex] + span) pvAdvance(tl);
+      }
+      pvLastTs = now;
+      pvRenderFrame();
+      if (pvPlaying) pvRAF = requestAnimationFrame(pvTick);
+    }
+
+    function pvPlay() {
+      if (!editorItems.length) return;
+      const tl = mergedTimeline();
+      if (pvTime >= tl.total - 0.05) pvTime = 0;   // 끝이면 처음부터
+      pvPlaying = true;
+      pvPlayBtn.textContent = '⏸';
+      const idx = pvIndexForTime(pvTime, tl);
+      pvLoadItem(idx, pvTime - tl.starts[idx], tl, true);
+      pvLastTs = performance.now();
+      cancelAnimationFrame(pvRAF);
+      pvRAF = requestAnimationFrame(pvTick);
+    }
+    function pvPause() {
+      pvPlaying = false;
+      pvPlayBtn.textContent = '▶';
+      pvVideo.pause();
+      cancelAnimationFrame(pvRAF);
+    }
+    function pvSeek(t) {
+      const tl = mergedTimeline();
+      pvTime = Math.max(0, Math.min(t, tl.total));
+      const idx = pvIndexForTime(pvTime, tl);
+      pvLoadItem(idx, pvTime - tl.starts[idx], tl, pvPlaying);
+      pvRenderFrame();
+    }
+
+    // 오버레이 레이어: 활성 오버레이마다 박스를 미리 만들고, 재생 시점에 따라 표시 토글
+    function pvRenderOverlayLayer() {
+      const layer = document.getElementById('pvOverlayLayer');
+      if (!layer) return;
+      layer.innerHTML = '';
+      pvOverlayBoxes = [];
+      editorOverlays.forEach(ov => {
+        if (ov.enabled === false) { pvOverlayBoxes.push(null); return; }
+        const box = document.createElement('div');
+        box.className = 'ov-preview-box pv-box ' + (ov.image_path ? 'image-mode ' : '') + ov.kind;
+        box.innerHTML = overlayBoxMarkup(ov);
+        box.style.left = `${ov.x_pct}%`;
+        box.style.top = `${ov.y_pct}%`;
+        if (ov.image_path) {
+          box.style.width = `${Math.max(5, ov.width_pct || 30)}%`;
+          box.style.height = (ov.height_pct && ov.height_pct > 0) ? `${ov.height_pct}%` : 'auto';
+        }
+        box.style.display = 'none';
+        layer.appendChild(box);
+        pvOverlayBoxes.push(box);
+      });
+    }
+    function pvUpdateOverlayVisibility(t) {
+      const total = mergedTimeline().total;
+      editorOverlays.forEach((ov, i) => {
+        const box = pvOverlayBoxes[i];
+        if (!box) return;
+        const s = Math.max(0, ov.start_sec || 0);
+        // 영상 끝을 넘는 부분은 export에서도 잘리므로 끝을 total로 클램프 (막대와 일치)
+        const e = Math.min(s + Math.max(OV_MIN_DUR, ov.duration_sec || 3), total);
+        box.style.display = (t >= s && t < e) ? '' : 'none';
+      });
+    }
+
+    function pvRenderFrame() {
+      const tl = mergedTimeline();
+      if (pvTime > tl.total) pvTime = tl.total;
+      pvUpdateOverlayVisibility(pvTime);
+      const px = pvTime * OV_PX_PER_SEC;
+      const oph = document.getElementById('ovPlayhead'); if (oph) oph.style.left = `${px}px`;
+      const bph = document.getElementById('bgmPlayhead'); if (bph) bph.style.left = `${px}px`;
+      if (pvTimeLabel) pvTimeLabel.textContent = `${pvTime.toFixed(1)} / ${tl.total.toFixed(1)}s`;
+      if (pvScrub && !pvScrubbing) pvScrub.value = tl.total > 0 ? String(Math.round(pvTime / tl.total * 1000)) : '0';
+    }
+
+    // renderOverlayTrack 끝에서 호출: 미리보기 표시/숨김 + 레이어 갱신
+    function pvSyncToTimeline() {
+      const wrap = document.getElementById('editorPreviewWrap');
+      if (!wrap) return;
+      const show = editorItems.length > 0;
+      wrap.style.display = show ? '' : 'none';
+      if (!show) { pvPause(); pvIndex = -1; pvTime = 0; return; }
+      measureEditorVideoAspect().then(a => {
+        const stage = document.getElementById('editorPreviewStage');
+        if (stage) stage.style.aspectRatio = String(a);
+      });
+      pvRenderOverlayLayer();
+      const tl = mergedTimeline();
+      if (pvTime > tl.total) pvTime = tl.total;
+      if (pvIndex < 0 || pvIndex >= editorItems.length) {
+        if (!pvPlaying) pvSeek(pvTime);   // 첫 프레임 로드
+      }
+      pvRenderFrame();
+    }
+
+    pvPlayBtn.addEventListener('click', () => { pvPlaying ? pvPause() : pvPlay(); });
+    pvScrub.addEventListener('input', () => {
+      pvScrubbing = true;
+      const tl = mergedTimeline();
+      pvSeek(tl.total * (parseFloat(pvScrub.value) / 1000));
+    });
+    pvScrub.addEventListener('change', () => { pvScrubbing = false; });
+    // 트랙 빈 곳 클릭 = 그 시점으로 이동 (오버레이/BGM 막대 클릭은 제외)
+    [overlayTrackInner, bgmTrackInner].forEach(track => {
+      track.addEventListener('click', e => {
+        if (e.target.closest('.overlay-item, .bgm-item, .ov-resize, .ov-del')) return;
+        const rect = track.getBoundingClientRect();
+        pvSeek((e.clientX - rect.left) / OV_PX_PER_SEC);
+      });
+    });
   </script>
 </body>
 </html>

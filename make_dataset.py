@@ -50,6 +50,8 @@ FEATURE_COLS = [
     'f_ball_to_goal_width_ratio',
     'f_goal_bbox_width_norm',
     'f_players_near_ball',
+    'f_ball_visible',
+    'f_ball_to_goal_approach',
 ]
 
 # XGBoost 입력 피처 (extract.py / train_model.py의 ML_FEATURES와 동기화)
@@ -67,6 +69,8 @@ ML_FEATURES = [
     "f_ball_to_goal_width_ratio_mean",
     "f_goal_bbox_width_norm_mean",
     "f_players_near_ball_max",
+    "f_ball_visible_mean",
+    "f_ball_to_goal_approach_max",
 ]
 
 

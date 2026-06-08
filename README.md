@@ -253,7 +253,22 @@ USE_XGB=1 python extract.py
 yt-dlp -f 'bv[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]' \
   --downloader aria2c \
   --downloader-args "aria2c:-x 16 -s 16 -k 1M" \
-  "https://www.youtube.com/watch?v=Fug0Uvy9XAE"
+  "https://www.youtube.com/live/EFXap8ZaXz8"
+```
+
+통째로 받기 (조각 병렬 `-N 16`). 출력 이름을 영상 id 로 두면 영상마다 파일명이 달라 겹치지 않음:
+
+```bash
+yt-dlp -f 'bv[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]' \
+ -N 16 \
+ -o '%(id)s.mp4' \
+ "https://www.youtube.com/live/ooCieZtCGlY"
+```
+
+받은 뒤 구간 자르기 (재인코딩 없이 즉시):
+
+```bash
+ffmpeg -ss 00:08:00 -to 00:55:20 -i EFXap8ZaXz8.mp4 -c copy EFXap8ZaXz8_clip.mp4
 ```
 
 # ai-highlight

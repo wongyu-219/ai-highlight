@@ -38,6 +38,8 @@ FEATURES = [
     "f_ball_to_goal_width_ratio_mean",
     "f_goal_bbox_width_norm_mean",
     "f_players_near_ball_max",
+    "f_ball_visible_mean",
+    "f_ball_to_goal_approach_max",
 ]
 
 N_SPLITS = 5

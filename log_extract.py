@@ -1,6 +1,6 @@
 """Log-based highlight extraction pipeline.
 
-타임라인 로그(elapsedMinutes + halfType + eventLog)를 파싱해
+타임라인 로그(elapsedSeconds + halfType + eventLog)를 파싱해
 이벤트 기준 -10s ~ +5s 클립을 ffmpeg으로 추출하고,
 부족분을 AI(YOLO)로 보충해 target_count개를 맞춘다.
 """
@@ -12,21 +12,20 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-CLIP_BEFORE = 10   # 이벤트 기준 앞으로 자를 초
-CLIP_AFTER  = 5    # 이벤트 기준 뒤로 자를 초
-# elapsedMinutes가 정수 분 단위라 실제 이벤트가 분 내 어디서 발생했는지 모름
-# → 해당 분 전체(60s)를 커버하도록 클립 끝을 +60s 연장
-CLIP_MINUTE_SPAN = 60
+from tqdm import tqdm
+
+CLIP_BEFORE = 45   # 이벤트 기준 앞으로 자를 초
+CLIP_AFTER  = 25   # 이벤트 기준 뒤로 자를 초
 
 # AI 클립 크기 (extract.py CLIP_DURATION_BEFORE/AFTER 와 동일 값)
 _AI_CLIP_BEFORE = 15
 _AI_CLIP_AFTER  = 10
 
-VALID_EVENTS = {"GOAL", "SHOT", "VALID_SHOT"}
-_MIN_GAP = CLIP_BEFORE + CLIP_MINUTE_SPAN + CLIP_AFTER  # 겹침 방지 최소 간격 (75s)
+VALID_EVENTS = {"GOAL", "HIGHLIGHT", "VALID_SHOT"}
+_MIN_GAP = 20  # 이벤트 병합 최소 간격 (초). 20s 이내 이벤트는 병합(GOAL 우선)
 
 # 로그 클립 스코어 (이벤트 우선순위 기반, AI XH score 범위보다 높게)
-_EVENT_SCORES = {"GOAL": 1.0, "VALID_SHOT": 0.8, "SHOT": 0.6}
+_EVENT_SCORES = {"GOAL": 1.0, "HIGHLIGHT": 0.9, "VALID_SHOT": 0.8}
 
 
 @dataclass
@@ -59,18 +58,21 @@ def parse_log(
     second_half_start_sec: float,
     event_filter: set[str] | None = None,
 ) -> list[LogEvent]:
-    """API 응답 data 배열을 받아 이벤트 리스트 반환."""
+    """API 응답 data 배열을 받아 이벤트 리스트 반환.
+
+    정렬: FIRST_HALF elapsedSeconds 오름차순 → SECOND_HALF elapsedSeconds 오름차순
+    """
     if event_filter is None:
         event_filter = VALID_EVENTS
 
     events: list[LogEvent] = []
     for item in log_data:
-        event_type = str(item.get("eventLog", ""))
+        event_type = str(item.get("eventLog", "")).upper()
         if event_type not in event_filter:
             continue
-        elapsed_min = int(item.get("elapsedMinutes", 0))
-        half = str(item.get("halfType", "FIRST_HALF"))
-        elapsed_sec = elapsed_min * 60
+        # API 필드명은 elapsedSeconds (구버전 elapsedTime 폴백)
+        elapsed_sec = int(item.get("elapsedSeconds", item.get("elapsedTime", 0)))
+        half = str(item.get("halfType", "FIRST_HALF")).upper()
 
         if half == "FIRST_HALF":
             video_sec = float(elapsed_sec)
@@ -84,6 +86,9 @@ def parse_log(
             elapsed_sec=elapsed_sec,
         ))
 
+    # FIRST_HALF 시간순 → SECOND_HALF 시간순
+    half_order = {"FIRST_HALF": 0, "SECOND_HALF": 1}
+    events.sort(key=lambda e: (half_order.get(e.half, 2), e.elapsed_sec))
     return events
 
 
@@ -115,6 +120,29 @@ def _get_video_duration(video_path: str) -> float | None:
             capture_output=True, text=True, check=True,
         )
         return float(r.stdout.strip())
+    except Exception:
+        return None
+
+
+def _get_video_fps(video_path: str) -> float | None:
+    """ffprobe 의 r_frame_rate(예: '60000/1001')를 실수 fps 로 반환. 실패 시 None.
+
+    AI 클립 anchor 라벨(frame/fps)을 정확히 계산하려면 실제 fps 가 필요하다.
+    (예: 59.94fps 영상을 30fps 로 잘못 나누면 라벨 시각이 2배가 됨)
+    """
+    try:
+        r = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=r_frame_rate",
+             "-of", "default=noprint_wrappers=1:nokey=1", video_path],
+            capture_output=True, text=True, check=True,
+        )
+        raw = r.stdout.strip()
+        if "/" in raw:
+            num, den = raw.split("/")
+            den_f = float(den)
+            return float(num) / den_f if den_f else None
+        return float(raw)
     except Exception:
         return None
 
@@ -165,10 +193,9 @@ def run_log_pipeline(
     events_meta: list[dict] = []
 
     # 2. ffmpeg 클립 추출
-    for i, ev in enumerate(events):
-        # elapsedMinutes 올림 처리: 24분 기록 = 23분대 발생
-        # video_sec은 해당 분의 끝 → 실제 구간 [video_sec-60, video_sec)
-        start = max(0.0, ev.video_sec - CLIP_MINUTE_SPAN - CLIP_BEFORE)
+    print(f"[로그] 이벤트 {len(events)}개 → 클립 추출 시작")
+    for i, ev in enumerate(tqdm(events, desc="로그 클립 추출 중")):
+        start = max(0.0, ev.video_sec - CLIP_BEFORE)
         end = ev.video_sec + CLIP_AFTER
         if video_duration:
             end = min(end, video_duration)
@@ -202,7 +229,7 @@ def run_log_pipeline(
     if remaining > 0 and model_path:
         exclude_intervals = [
             (
-                max(0.0, ev.video_sec - CLIP_MINUTE_SPAN - CLIP_BEFORE - _AI_CLIP_BEFORE),
+                max(0.0, ev.video_sec - CLIP_BEFORE - _AI_CLIP_BEFORE),
                 ev.video_sec + CLIP_AFTER + _AI_CLIP_AFTER,
             )
             for ev in events
@@ -254,11 +281,16 @@ def run_log_pipeline(
             if i < len(ai_feats):
                 clip_features_map[name] = ai_feats[i]
 
+    # 실제 fps: AI 보충 결과의 fps(탐지 시 cv2 로 읽은 값) 우선, 없으면 ffprobe 로 직접 측정.
+    # 서버가 AI 클립 anchor 라벨을 frame/fps 로 계산하므로 실제 fps 가 정확해야 함.
+    real_fps = (_ai_result.fps if _ai_result and _ai_result.fps else None) or _get_video_fps(video_path) or 30.0
+
     return LogExtractResult(
         success=True,
         message=f"로그 {log_count}개 + AI {ai_count}개 클립 추출 완료",
         clip_paths=clip_paths,
         events=events_meta,
+        fps=float(real_fps),
         clip_scores=clip_scores,
         clip_features=clip_features_map,
         clip_feature_stats=clip_feature_stats_map,

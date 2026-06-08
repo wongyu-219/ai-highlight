@@ -1,0 +1,10 @@
+# 개인 클립 추적용 ByteTrack 설정 (기본보다 트랙 수명↑ = 끊김·재클릭↓).
+# 기본 bytetrack.yaml 대비: track_buffer 30→60(놓친 트랙을 더 오래 살려 재연결),
+# match_thresh 0.8→0.9(가림 후 재등장 시 느슨한 매칭 허용).
+tracker_type: bytetrack
+track_high_thresh: 0.25
+track_low_thresh: 0.1
+new_track_thresh: 0.25
+track_buffer: 60
+match_thresh: 0.9
+fuse_score: True

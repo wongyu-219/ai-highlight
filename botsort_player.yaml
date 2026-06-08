@@ -1,0 +1,22 @@
+# 개인 클립 추적용 BoT-SORT + ReID 설정.
+# bytetrack_player.yaml 대비 핵심 차이: 외형(ReID) 임베딩으로 가림·교차 후 같은
+# 선수를 재연결 → ByteTrack(모션/IoU만)이 못 막는 교차 시 ID 스위치를 근본 완화.
+#   - with_reid: True / model: auto → ReID 임베딩용 경량 분류모델(yolo26n-cls.pt, 최초 1회 ~5.5MB 자동 다운로드)
+#   - gmc_method: sparseOptFlow → 중계 카메라 패닝 보정(축구 풀경기 필수)
+#   - track_buffer 60, match_thresh 0.9 → 놓친 트랙 오래 살림 + 재등장 매칭 완화
+# ReID 초기화 실패 시 player_clip_extract.PLAYER_TRACKER 가 bytetrack_player.yaml 로 폴백.
+tracker_type: botsort
+track_high_thresh: 0.25
+track_low_thresh: 0.1
+new_track_thresh: 0.25
+track_buffer: 60
+match_thresh: 0.9
+fuse_score: True
+
+gmc_method: sparseOptFlow
+
+# ReID
+proximity_thresh: 0.5
+appearance_thresh: 0.8
+with_reid: True
+model: auto
